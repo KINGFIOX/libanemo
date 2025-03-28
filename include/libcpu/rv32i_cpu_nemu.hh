@@ -1,7 +1,7 @@
 #ifndef LIBCPU_RV32I_CPU_NEMU_HH
 #define LIBCPU_RV32I_CPU_NEMU_HH
 
-#include <libcpu/cpu.hh>
+#include <libcpu/rv32i_cpu.hh>
 #include <libcpu/rv32i.hh>
 #include <libvio/ringbuffer.hh>
 #include <libvio/frontend.hh>
@@ -13,21 +13,12 @@
 
 namespace libcpu {
 
-class rv32i_cpu_nemu: public cpu {
+class rv32i_cpu_nemu: public rv32i_cpu {
 
     public:
 
-        static constexpr size_t n_gpr = 32;
         static constexpr size_t n_csr = 10;
         static constexpr size_t n_interrupts = 16;
-        static constexpr uint32_t ram_base = 0x80000000;
-
-        using width_t = libvio::width_t;
-        using priv_level_t = rv32i::priv_level_t;
-        using csr_addr_t = rv32i::csr_addr_t;
-        using event_type_t = rv32i::event_type_t;
-        using event_t = rv32i::event_t;
-        using mcause_t = rv32i::mcause_t;
 
         using decode_t = struct decode_t {
             void (*op)(rv32i_cpu_nemu* cpu, const decode_t& decode);
@@ -62,9 +53,6 @@ class rv32i_cpu_nemu: public cpu {
         uint32_t exception_cause;
         uint32_t exception_mtval;
 
-        // event ring buffer for tracing and difftest
-        libvio::ringbuffer<event_t> event_buffer;
-
         void raise_exception(mcause_t mcause, uint32_t mtval);
         uint32_t handle_trap(void);
 
@@ -80,28 +68,20 @@ class rv32i_cpu_nemu: public cpu {
 
     public:
 
-        uint32_t gpr_read(uint8_t gpr_addr) const;
-        uint32_t get_pc(void) const;
-        priv_level_t get_priv_level(void) const;
-
-        std::vector<uint8_t> memory;
-
-        libvio::bus* mmio_bus = nullptr;
-
-        bool trace_on = false;
+        uint32_t gpr_read(uint8_t gpr_addr) const override;
+        uint32_t get_pc(void) const override;
+        priv_level_t get_priv_level(void) const override;
 
         rv32i_cpu_nemu(size_t event_buffer_size, size_t memory_size, libvio::bus* mmio_bus);
 
-        void next_cycle(void);
-        void next_instruction(void);
-        bool get_ebreak(void) const;
+        void next_cycle(void) override;
+        void next_instruction(void) override;
+        bool get_ebreak(void) const override;
 
-        void raise_interrupt(mcause_t mcause);
+        void raise_interrupt(mcause_t mcause) override;
 
-        uint32_t csr_read(csr_addr_t addr) const;
-        uint32_t csr_read_bits(csr_addr_t addr, uint32_t bit_mask) const;
-        
-        const libvio::ringbuffer<event_t>& get_events(void) const;
+        uint32_t csr_read(csr_addr_t addr) const override;
+        uint32_t csr_read_bits(csr_addr_t addr, uint32_t bit_mask) const override;
 
         static decode_t decode_instruction(uint32_t instruction);
 
