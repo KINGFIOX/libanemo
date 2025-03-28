@@ -13,5 +13,8 @@ file(GLOB_RECURSE "NEMUCORE_SRCS" "src/rv32i_nemu/*.cc")
 add_library(nemucore STATIC "${NEMUCORE_SRCS}")
 set_target_properties(nemucore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
+add_library(difftest STATIC src/difftest.cc)
+set_target_properties(difftest PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 add_executable(nemu-minimal src/main.cc)
 target_link_libraries(nemu-minimal PRIVATE nemucore vio)

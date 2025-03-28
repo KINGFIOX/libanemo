@@ -27,6 +27,7 @@ enum class event_type_t: uint32_t {
     ret,       // target addr  // stack pointer
     trap,      // mcause       // mtval
     mret,      // target addr  // mstatus
+    error,     // event_type_t // instruction
 };
 
 struct event_t {
@@ -35,6 +36,17 @@ struct event_t {
     uint32_t val1;
     uint32_t val2;
 };
+
+static inline bool operator==(const event_t& lhs, const event_t& rhs) {
+    return lhs.type == rhs.type
+        && lhs.pc == rhs.pc
+        && lhs.val1 == rhs.val1
+        && lhs.val2 == rhs.val2;
+}
+
+static inline bool operator!=(const event_t& lhs, const event_t& rhs) {
+    return !(lhs == rhs);
+}
 
 enum csr_addr_t {
     CSR_ADDR_MSTATUS  = 0x300,  // Purr-ivilege mode status
