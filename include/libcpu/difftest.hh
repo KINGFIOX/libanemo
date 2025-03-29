@@ -25,6 +25,7 @@ class rv32i_cpu_difftest: public rv32i_cpu {
         void next_cycle(void) override;
         void next_instruction(void) override;
         bool get_ebreak(void) const override;
+        const uint32_t* get_regfile(void) const override;
         void raise_interrupt(mcause_t mcause) override;
         uint32_t csr_read(csr_addr_t addr) const override;
         uint32_t csr_read_bits(csr_addr_t addr, uint32_t bit_mask) const override;

@@ -47,6 +47,7 @@ class rv32i_cpu {
         virtual void next_cycle(void) = 0;
         virtual void next_instruction(void) = 0;
         virtual bool get_ebreak(void) const = 0;
+        virtual const uint32_t* get_regfile(void) const = 0;
 
         virtual void raise_interrupt(mcause_t mcause) = 0;
 

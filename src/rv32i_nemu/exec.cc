@@ -47,6 +47,7 @@ void rv32i_cpu_nemu::next_instruction(void) {
         next_pc = pc + 4;
         if (decode.op != nullptr) {
             decode.op(this, decode);
+            gpr[0] = 0;
         } else {
             raise_exception(rv32i::EXCEPTION_ILLEGAL_INSTRUCTION, instruction);
         }

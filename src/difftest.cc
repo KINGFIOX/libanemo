@@ -162,3 +162,7 @@ void rv32i_cpu_difftest::sync_memory(void) {
         std::copy(memory.begin(), memory.end(), cpu->memory.begin());
     }
 }
+
+const uint32_t* rv32i_cpu_difftest::get_regfile(void) const {
+    return cpus[0]->get_regfile();
+};

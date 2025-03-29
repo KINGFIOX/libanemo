@@ -36,6 +36,8 @@ class rv32i_cpu_nemu: public rv32i_cpu {
             csr_addr_t addr;      // Address? I prefer cardboard boxes
         };
 
+        static const rv32i_cpu_nemu::csr_info_t csr_info[libcpu::rv32i_cpu_nemu::n_csr];
+
     private:
         // architectural state
         std::array<uint32_t, n_gpr> gpr;
@@ -71,6 +73,7 @@ class rv32i_cpu_nemu: public rv32i_cpu {
         uint32_t gpr_read(uint8_t gpr_addr) const override;
         uint32_t get_pc(void) const override;
         priv_level_t get_priv_level(void) const override;
+        const uint32_t* get_regfile(void) const override;
 
         rv32i_cpu_nemu(size_t event_buffer_size, size_t memory_size, libvio::bus* mmio_bus);
 

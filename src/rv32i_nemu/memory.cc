@@ -9,8 +9,8 @@ using namespace libcpu;
 using namespace libcpu::rv32i;
 
 #define ram_end (ram_base+cpu->memory.size())
-#define log_load if (cpu->trace_on) { cpu->event_buffer.push_back({.type=event_type_t::load, .val1=addr, .val2=data}); }
-#define log_store if (cpu->trace_on) { cpu->event_buffer.push_back({.type=event_type_t::store, .val1=addr, .val2=data}); }
+#define log_load if (cpu->trace_on) { cpu->event_buffer.push_back({.type=event_type_t::load, .pc=cpu->pc, .val1=addr, .val2=data}); }
+#define log_store if (cpu->trace_on) { cpu->event_buffer.push_back({.type=event_type_t::store, .pc=cpu->pc, .val1=addr, .val2=data}); }
 
 void rv32i_cpu_nemu::lb(rv32i_cpu_nemu* cpu, const decode_t& decode) {
     uint32_t addr = cpu->gpr[decode.rs1] + decode.imm;

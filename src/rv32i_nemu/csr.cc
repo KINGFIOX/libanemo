@@ -7,7 +7,7 @@ using namespace libcpu;
 using namespace libcpu::rv32i;
 
 // orded in accessing frequnecy to boost performance
-static const rv32i_cpu_nemu::csr_info_t csr_info[libcpu::rv32i_cpu_nemu::n_csr] = {
+const rv32i_cpu_nemu::csr_info_t rv32i_cpu_nemu::csr_info[n_csr] = {
   // init_value      wpri_mask       name           addr          |  Cat Commentary
   {0x00000000, 0x0000ffff, "mip",      CSR_ADDR_MIP},       // 0s? Purrfect for ignoring mice interrupts 🐭  
   {0x00000000, 0x0000ffff, "mie",      CSR_ADDR_MIE},       // MIE? More like "Meow-Interrupts-Enabled"  
