@@ -1,6 +1,6 @@
 #include <cstdint>
 #include <libcpu/rv32i.hh>
-#include <libcpu/rv32i_cpu_nemu.hh>
+#include <libcpu/rv32i_cpu_system.hh>
 
 using namespace libcpu;
 using namespace libcpu::rv32i;
@@ -52,7 +52,7 @@ static inline uint32_t rs2_j(uint32_t)       { return 0; }
 static inline uint32_t rd_j(uint32_t instr)  { return (instr >> 7)  & 0x1F; }
 
 
-rv32i_cpu_nemu::decode_t rv32i_cpu_nemu::decode_instruction(uint32_t instruction) {
+rv32i_cpu_system::decode_t rv32i_cpu_system::decode_instruction(uint32_t instruction) {
     decode_t decode{.imm=0, .rd=0};
     decode.instr = instruction;
 

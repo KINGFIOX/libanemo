@@ -1,5 +1,5 @@
 #include <libcpu/rv32i.hh>
-#include <libcpu/rv32i_cpu_nemu.hh>
+#include <libcpu/rv32i_cpu_system.hh>
 
 // In this file, csr operations are implemented.
 
@@ -7,7 +7,7 @@ using namespace libcpu;
 using namespace libcpu::rv32i;
 
 // orded in accessing frequnecy to boost performance
-const rv32i_cpu_nemu::csr_info_t rv32i_cpu_nemu::csr_info[n_csr] = {
+const rv32i_cpu_system::csr_info_t rv32i_cpu_system::csr_info[n_csr] = {
   // init_value      wpri_mask       name           addr          |  Cat Commentary
   {0x00000000, 0x0000ffff, "mip",      CSR_ADDR_MIP},       // 0s? Purrfect for ignoring mice interrupts 🐭  
   {0x00000000, 0x0000ffff, "mie",      CSR_ADDR_MIE},       // MIE? More like "Meow-Interrupts-Enabled"  
@@ -24,8 +24,8 @@ const rv32i_cpu_nemu::csr_info_t rv32i_cpu_nemu::csr_info[n_csr] = {
 // CSR access with no permission checking
 // simulator internal use only
 
-uint32_t rv32i_cpu_nemu::csr_read(rv32i_cpu_nemu::csr_addr_t addr) const {
-  for (size_t i=0; i<rv32i_cpu_nemu::n_csr; ++i) {
+uint32_t rv32i_cpu_system::csr_read(csr_addr_t addr) const {
+  for (size_t i=0; i<rv32i_cpu_system::n_csr; ++i) {
     if (csr_info[i].addr == addr) {
       return csr[i];
     }
@@ -33,8 +33,8 @@ uint32_t rv32i_cpu_nemu::csr_read(rv32i_cpu_nemu::csr_addr_t addr) const {
   return 0;
 }
 
-uint32_t rv32i_cpu_nemu::csr_read_bits(rv32i_cpu_nemu::csr_addr_t addr, uint32_t bit_mask) const {
-  for (size_t i=0; i<rv32i_cpu_nemu::n_csr; ++i) {
+uint32_t rv32i_cpu_system::csr_read_bits(csr_addr_t addr, uint32_t bit_mask) const {
+  for (size_t i=0; i<rv32i_cpu_system::n_csr; ++i) {
     if (csr_info[i].addr == addr) {
       return csr[i] & bit_mask;
     }
@@ -42,8 +42,8 @@ uint32_t rv32i_cpu_nemu::csr_read_bits(rv32i_cpu_nemu::csr_addr_t addr, uint32_t
   return 0;
 }
 
-void rv32i_cpu_nemu::csr_write(rv32i_cpu_nemu::csr_addr_t addr, uint32_t value) {
-  for (size_t i=0; i<rv32i_cpu_nemu::n_csr; ++i) {
+void rv32i_cpu_system::csr_write(csr_addr_t addr, uint32_t value) {
+  for (size_t i=0; i<rv32i_cpu_system::n_csr; ++i) {
     if (csr_info[i].addr == addr) {
       csr[i] = value;
       break;
@@ -51,8 +51,8 @@ void rv32i_cpu_nemu::csr_write(rv32i_cpu_nemu::csr_addr_t addr, uint32_t value) 
   }
 }
 
-void rv32i_cpu_nemu::csr_write_bits(rv32i_cpu_nemu::csr_addr_t addr, uint32_t value, uint32_t bit_mask) {
-  for (size_t i=0; i<rv32i_cpu_nemu::n_csr; ++i) {
+void rv32i_cpu_system::csr_write_bits(csr_addr_t addr, uint32_t value, uint32_t bit_mask) {
+  for (size_t i=0; i<rv32i_cpu_system::n_csr; ++i) {
     if (csr_info[i].addr == addr) {
       uint32_t oldval = csr[i];
       csr[i] = (oldval & ~bit_mask) | (value & bit_mask);
@@ -61,8 +61,8 @@ void rv32i_cpu_nemu::csr_write_bits(rv32i_cpu_nemu::csr_addr_t addr, uint32_t va
   }
 }
 
-void rv32i_cpu_nemu::csr_set_bits(rv32i_cpu_nemu::csr_addr_t addr, uint32_t bits) {
-  for (size_t i=0; i<rv32i_cpu_nemu::n_csr; ++i) {
+void rv32i_cpu_system::csr_set_bits(csr_addr_t addr, uint32_t bits) {
+  for (size_t i=0; i<rv32i_cpu_system::n_csr; ++i) {
     if (csr_info[i].addr == addr) {
       uint32_t oldval = csr[i];
       uint32_t newval = oldval | bits;
@@ -72,8 +72,8 @@ void rv32i_cpu_nemu::csr_set_bits(rv32i_cpu_nemu::csr_addr_t addr, uint32_t bits
   }
 }
 
-void rv32i_cpu_nemu::csr_clear_bits(rv32i_cpu_nemu::csr_addr_t addr, uint32_t bits) {
-  for (size_t i=0; i<rv32i_cpu_nemu::n_csr; ++i) {
+void rv32i_cpu_system::csr_clear_bits(csr_addr_t addr, uint32_t bits) {
+  for (size_t i=0; i<rv32i_cpu_system::n_csr; ++i) {
     if (csr_info[i].addr == addr) {
       uint32_t oldval = csr[i];
       uint32_t newval = oldval & (~bits);
@@ -85,22 +85,22 @@ void rv32i_cpu_nemu::csr_clear_bits(rv32i_cpu_nemu::csr_addr_t addr, uint32_t bi
 
 // functions that simulate behaviros of CSR accesing instructions
 
-bool rv32i_cpu_nemu::csr_check_read_access(rv32i_cpu_nemu::csr_addr_t addr) const {
+bool rv32i_cpu_system::csr_check_read_access(csr_addr_t addr) const {
   return static_cast<int>(priv_level) >= (addr>>8 & 0x3);
 }
 
-bool rv32i_cpu_nemu::csr_check_write_access(rv32i_cpu_nemu::csr_addr_t addr) const {
+bool rv32i_cpu_system::csr_check_write_access(csr_addr_t addr) const {
   return csr_check_read_access(addr) && (addr>>10)!=0x3;
 }
 
 #define CSR_ACCESS_FAULT cpu->raise_exception(EXCEPTION_ILLEGAL_INSTRUCTION, decode.instr); return;
 
-void rv32i_cpu_nemu::csrrw(rv32i_cpu_nemu* cpu, const decode_t& decode) {
+void rv32i_cpu_system::csrrw(rv32i_cpu_system* cpu, const decode_t& decode) {
   csr_addr_t csr_addr = static_cast<csr_addr_t>(decode.imm&0xfff);
   if (!cpu->csr_check_write_access(csr_addr)) {
     CSR_ACCESS_FAULT;
   }
-  for (size_t i=0; i<rv32i_cpu_nemu::n_csr; ++i) {
+  for (size_t i=0; i<rv32i_cpu_system::n_csr; ++i) {
     if (csr_info[i].addr == csr_addr) {
       uint32_t oldval = cpu->csr[i];
       uint32_t newval = decode.rs1==0 ? 0 : cpu->gpr[decode.rs1];
@@ -119,7 +119,7 @@ void rv32i_cpu_nemu::csrrw(rv32i_cpu_nemu* cpu, const decode_t& decode) {
   CSR_ACCESS_FAULT;
 }
 
-void rv32i_cpu_nemu::csrrs(rv32i_cpu_nemu* cpu, const decode_t& decode) {
+void rv32i_cpu_system::csrrs(rv32i_cpu_system* cpu, const decode_t& decode) {
   csr_addr_t csr_addr = static_cast<csr_addr_t>(decode.imm&0xfff);
   if (!cpu->csr_check_read_access(csr_addr)) {
     CSR_ACCESS_FAULT;
@@ -127,7 +127,7 @@ void rv32i_cpu_nemu::csrrs(rv32i_cpu_nemu* cpu, const decode_t& decode) {
   if (decode.rs1!=0 && !cpu->csr_check_write_access(csr_addr)) {
     CSR_ACCESS_FAULT;
   }
-  for (size_t i=0; i<rv32i_cpu_nemu::n_csr; ++i) {
+  for (size_t i=0; i<rv32i_cpu_system::n_csr; ++i) {
     if (csr_info[i].addr == csr_addr) {
       uint32_t oldval = cpu->csr[i];
       uint32_t bitmask = decode.rs1==0 ? 0 : cpu->gpr[decode.rs1];
@@ -147,7 +147,7 @@ void rv32i_cpu_nemu::csrrs(rv32i_cpu_nemu* cpu, const decode_t& decode) {
   CSR_ACCESS_FAULT;
 }
 
-void rv32i_cpu_nemu::csrrc(rv32i_cpu_nemu* cpu, const decode_t& decode) {
+void rv32i_cpu_system::csrrc(rv32i_cpu_system* cpu, const decode_t& decode) {
   csr_addr_t csr_addr = static_cast<csr_addr_t>(decode.imm&0xfff);
   if (!cpu->csr_check_read_access(csr_addr)) {
     CSR_ACCESS_FAULT;
@@ -155,7 +155,7 @@ void rv32i_cpu_nemu::csrrc(rv32i_cpu_nemu* cpu, const decode_t& decode) {
   if (decode.rs1!=0 && !cpu->csr_check_write_access(csr_addr)) {
     CSR_ACCESS_FAULT;
   }
-  for (size_t i=0; i<rv32i_cpu_nemu::n_csr; ++i) {
+  for (size_t i=0; i<rv32i_cpu_system::n_csr; ++i) {
     if (csr_info[i].addr == csr_addr) {
       uint32_t oldval = cpu->csr[i];
       uint32_t bitmask = decode.rs1==0 ? 0 : cpu->gpr[decode.rs1];
@@ -177,12 +177,12 @@ void rv32i_cpu_nemu::csrrc(rv32i_cpu_nemu* cpu, const decode_t& decode) {
   CSR_ACCESS_FAULT;
 }
 
-void rv32i_cpu_nemu::csrrwi(rv32i_cpu_nemu* cpu, const decode_t& decode) {
+void rv32i_cpu_system::csrrwi(rv32i_cpu_system* cpu, const decode_t& decode) {
   csr_addr_t csr_addr = static_cast<csr_addr_t>(decode.imm&0xfff);
   if (!cpu->csr_check_write_access(csr_addr)) {
     CSR_ACCESS_FAULT;
   }
-  for (size_t i=0; i<rv32i_cpu_nemu::n_csr; ++i) {
+  for (size_t i=0; i<rv32i_cpu_system::n_csr; ++i) {
     if (csr_info[i].addr == csr_addr) {
       uint32_t oldval = cpu->csr[i];
       uint32_t newval = decode.rs1;
@@ -201,7 +201,7 @@ void rv32i_cpu_nemu::csrrwi(rv32i_cpu_nemu* cpu, const decode_t& decode) {
   CSR_ACCESS_FAULT;
 }
 
-void rv32i_cpu_nemu::csrrsi(rv32i_cpu_nemu* cpu, const decode_t& decode) {
+void rv32i_cpu_system::csrrsi(rv32i_cpu_system* cpu, const decode_t& decode) {
   csr_addr_t csr_addr = static_cast<csr_addr_t>(decode.imm&0xfff);
   if (!cpu->csr_check_read_access(csr_addr)) {
     CSR_ACCESS_FAULT;
@@ -209,7 +209,7 @@ void rv32i_cpu_nemu::csrrsi(rv32i_cpu_nemu* cpu, const decode_t& decode) {
   if (decode.rs1!=0 && !cpu->csr_check_write_access(csr_addr)) {
     CSR_ACCESS_FAULT;
   }
-  for (size_t i=0; i<rv32i_cpu_nemu::n_csr; ++i) {
+  for (size_t i=0; i<rv32i_cpu_system::n_csr; ++i) {
     if (csr_info[i].addr == csr_addr) {
       uint32_t oldval = cpu->csr[i];
       uint32_t bitmask = decode.rs1;
@@ -230,7 +230,7 @@ void rv32i_cpu_nemu::csrrsi(rv32i_cpu_nemu* cpu, const decode_t& decode) {
 }
 
 
-void rv32i_cpu_nemu::csrrci(rv32i_cpu_nemu* cpu, const decode_t& decode) {
+void rv32i_cpu_system::csrrci(rv32i_cpu_system* cpu, const decode_t& decode) {
   csr_addr_t csr_addr = static_cast<csr_addr_t>(decode.imm&0xfff);
   if (!cpu->csr_check_read_access(csr_addr)) {
     CSR_ACCESS_FAULT;
@@ -238,7 +238,7 @@ void rv32i_cpu_nemu::csrrci(rv32i_cpu_nemu* cpu, const decode_t& decode) {
   if (decode.rs1!=0 && !cpu->csr_check_write_access(csr_addr)) {
     CSR_ACCESS_FAULT;
   }
-  for (size_t i=0; i<rv32i_cpu_nemu::n_csr; ++i) {
+  for (size_t i=0; i<rv32i_cpu_system::n_csr; ++i) {
     if (csr_info[i].addr == csr_addr) {
       uint32_t oldval = cpu->csr[i];
       uint32_t bitmask = decode.rs1;

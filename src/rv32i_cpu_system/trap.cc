@@ -1,13 +1,13 @@
 #include <cstdint>
 #include <libcpu/rv32i.hh>
-#include <libcpu/rv32i_cpu_nemu.hh>
+#include <libcpu/rv32i_cpu_system.hh>
 
 // In this file, trap related instructions and functions are defined.
 
 using namespace libcpu;
 using namespace libcpu::rv32i;
 
-void rv32i_cpu_nemu::ecall(rv32i_cpu_nemu* cpu, const decode_t& decode) {
+void rv32i_cpu_system::ecall(rv32i_cpu_system* cpu, const decode_t& decode) {
     switch (cpu->priv_level) {
         case priv_level_t::m:
             cpu->raise_exception(EXCEPTION_M_ECALL, 0);
@@ -24,15 +24,15 @@ void rv32i_cpu_nemu::ecall(rv32i_cpu_nemu* cpu, const decode_t& decode) {
     }
 }
 
-void rv32i_cpu_nemu::ebreak(rv32i_cpu_nemu* cpu, const decode_t& decode) {
+void rv32i_cpu_system::ebreak(rv32i_cpu_system* cpu, const decode_t& decode) {
     cpu->ebreak_flag = true;
 }
 
-void rv32i_cpu_nemu::mret(rv32i_cpu_nemu* cpu, const decode_t& decode) {
+void rv32i_cpu_system::mret(rv32i_cpu_system* cpu, const decode_t& decode) {
     uint32_t mepc = cpu->csr_read(CSR_ADDR_MEPC);
-    if (cpu->trace_on) {
+    if (cpu->event_buffer!=nullptr) {
         uint32_t mstatus = cpu->csr_read(CSR_ADDR_MSTATUS);
-        cpu->event_buffer.push_back({.type=event_type_t::ret, .pc=cpu->pc, .val1=mepc, .val2=mstatus});
+        cpu->event_buffer->push_back({.type=event_type_t::trap_ret, .pc=cpu->pc, .val1=mepc, .val2=mstatus});
     }
     // retore pc
     cpu->next_pc = mepc;
@@ -46,12 +46,12 @@ void rv32i_cpu_nemu::mret(rv32i_cpu_nemu* cpu, const decode_t& decode) {
     cpu->csr_clear_bits(CSR_ADDR_MSTATUS, MSTATUS_BIT_MPPH|MSTATUS_BIT_MPPL);
 }
 
-bool rv32i_cpu_nemu::get_ebreak(void) const {
+bool rv32i_cpu_system::get_ebreak(void) const {
     return ebreak_flag;
 }
 
 // returns the pc of the next instruction
-uint32_t rv32i_cpu_nemu::handle_trap(void) {
+uint32_t rv32i_cpu_system::handle_trap(void) {
     // handle exceptions
     if (exception_flag) {
         exception_flag = false;
@@ -68,8 +68,8 @@ uint32_t rv32i_cpu_nemu::handle_trap(void) {
         // exception handler is never vectored
         uint32_t mtvec = csr_read(CSR_ADDR_MTVEC);
         uint32_t vector_base = mtvec & (~MTVEC_BIT_VECTORED);
-        if (trace_on) {
-            event_buffer.push_back({.type=event_type_t::trap, .pc=pc, .val1=exception_cause, .val2=exception_mtval});
+        if (event_buffer!=nullptr) {
+            event_buffer->push_back({.type=event_type_t::trap, .pc=pc, .val1=exception_cause, .val2=exception_mtval});
         }
         priv_level = priv_level_t::m;
         return vector_base;
@@ -101,8 +101,8 @@ uint32_t rv32i_cpu_nemu::handle_trap(void) {
                 uint32_t mtvec = csr_read(CSR_ADDR_MTVEC);
                 uint32_t vector_base = mtvec & (~MTVEC_BIT_VECTORED);
                 uint32_t is_vectord = mtvec & MTVEC_BIT_VECTORED;
-                if (trace_on) {
-                    event_buffer.push_back({.type=event_type_t::trap, .pc=next_pc, .val1=cause|MCAUSE_BIT_INTERRUPT, .val2=0});
+                if (event_buffer!=nullptr) {
+                    event_buffer->push_back({.type=event_type_t::trap, .pc=next_pc, .val1=cause|MCAUSE_BIT_INTERRUPT, .val2=0});
                 }
                 priv_level = priv_level_t::m;
                 if (is_vectord) {
@@ -116,13 +116,13 @@ uint32_t rv32i_cpu_nemu::handle_trap(void) {
     return next_pc;
 }
 
-void rv32i_cpu_nemu::raise_exception(mcause_t mcause_code, uint32_t mtval) {
+void rv32i_cpu_system::raise_exception(mcause_t mcause_code, uint32_t mtval) {
     exception_flag = true;
     exception_cause = mcause_code;
     exception_mtval = mtval;
 }
 
-void rv32i_cpu_nemu::raise_interrupt(mcause_t mcause_code) {
+void rv32i_cpu_system::raise_interrupt(mcause_t mcause_code) {
     if (mcause_code < n_interrupts) {
         csr_set_bits(CSR_ADDR_MIP, 1<<mcause_code);
     }

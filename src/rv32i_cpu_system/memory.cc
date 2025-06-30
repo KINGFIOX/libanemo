@@ -1,172 +1,95 @@
 #include <cstdint>
 #include <libcpu/rv32i.hh>
-#include <libcpu/rv32i_cpu_nemu.hh>
+#include <libcpu/rv32i_cpu_system.hh>
+#include <libvio/frontend.hh>
 #include <optional>
 
 // In this file, memory access instructions are implemented.
 
+using namespace libvio;
 using namespace libcpu;
 using namespace libcpu::rv32i;
 
-#define ram_end (ram_base+cpu->memory.size())
-#define log_load if (cpu->trace_on) { cpu->event_buffer.push_back({.type=event_type_t::load, .pc=cpu->pc, .val1=addr, .val2=data}); }
-#define log_store if (cpu->trace_on) { cpu->event_buffer.push_back({.type=event_type_t::store, .pc=cpu->pc, .val1=addr, .val2=data}); }
-
-void rv32i_cpu_nemu::lb(rv32i_cpu_nemu* cpu, const decode_t& decode) {
-    uint32_t addr = cpu->gpr[decode.rs1] + decode.imm;
-    uint32_t data = 0;
-    if (addr>=ram_base && addr<ram_end) {
-        data = (int32_t)(int8_t)cpu->memory[addr-ram_base];
-        cpu->gpr[decode.rd] = data;
-    } else {
-        auto res = cpu->mmio_bus->mmio_read(addr, width_t::byte);
-        if (res.has_value()) {
-            data = (int32_t)(int8_t)(*res);
-            cpu->gpr[decode.rd] = data;
-        } else {
-            cpu->raise_exception(EXCEPTION_LOAD_ACCESS_FAULT, addr);
-            return;
-        }
+void rv32i_cpu_system::load(const decode_t &decode, width_t width, bool sign_extend) {
+    uint32_t addr = gpr[decode.rs1] + decode.imm;
+    auto data_opt = memory.read(addr, width);
+    // fall back to MMIO if the address is out of RAM
+    if (!data_opt.has_value() && mmio_bus!=nullptr) {
+        data_opt = mmio_bus->mmio_read(addr, width);
     }
-    log_load;
+    if (data_opt.has_value()) {
+        // `data` is zero extended
+        word_t data = data_opt.value();
+        // log the memory operation with *zero extended* data
+        if (event_buffer != nullptr) {
+            event_buffer->push_back({.type=event_type_t::load, .pc=pc, .val1=addr, .val2=data_opt.value()});
+        }
+        // sign extend the data
+        if (sign_extend) {
+            switch (width) {
+                case width_t::byte:
+                    data = uint32_t(int32_t(int8_t(data)));
+                    break;
+                case width_t::half:
+                    data = uint32_t(int32_t(int16_t(data)));
+                    break;
+                default:
+                    break;
+            }
+        }
+        gpr[decode.rd] = data;
+    } else {
+        // both RAM and MMIO failed
+        raise_exception(EXCEPTION_LOAD_ACCESS_FAULT, addr);
+    }
 }
 
-void rv32i_cpu_nemu::lh(rv32i_cpu_nemu* cpu, const decode_t& decode) {
-    uint32_t addr = cpu->gpr[decode.rs1] + decode.imm;
-    uint32_t data = 0;
-    if (addr%2 != 0) {
-        cpu->raise_exception(EXCEPTION_LOAD_ADDRESS_MISALIGNED, addr);
-        return;
-    } else if (addr>=ram_base && addr+1<ram_end) {
-        data = (int32_t)(int16_t)(uint16_t(cpu->memory[addr-ram_base+1])<<8 | uint16_t(cpu->memory[addr-ram_base]));
-        cpu->gpr[decode.rd] = data;
-    } else {
-        auto res = cpu->mmio_bus->mmio_read(addr, width_t::half);
-        if (res.has_value()) {
-            data = (int32_t)(int16_t)(*res);
-            cpu->gpr[decode.rd] = data;
-        } else {
-            cpu->raise_exception(EXCEPTION_LOAD_ACCESS_FAULT, addr);
-            return;
-        }
+void rv32i_cpu_system::store(const decode_t &decode, width_t width) {
+    word_t addr = gpr[decode.rs1] + decode.imm;
+    word_t data = gpr[decode.rs2];
+    bool success = memory.write(addr, width, data);
+    // fall back to MMIO
+    if (!success && mmio_bus!=nullptr) {
+        success = mmio_bus->mmio_write(addr, width, data);
     }
-    log_load;
+    if (success) {
+        if (event_buffer!=nullptr) {
+            event_buffer->push_back({.type=event_type_t::store, .pc=pc, .val1=addr, .val2=data});
+        }
+    } else {
+        // both RAM and MMIO failed
+        raise_exception(EXCEPTION_STORE_AMO_ACCESS_FAULT, addr);
+    }
 }
 
-void rv32i_cpu_nemu::lw(rv32i_cpu_nemu* cpu, const decode_t& decode) {
-    uint32_t addr = cpu->gpr[decode.rs1] + decode.imm;
-    uint32_t data = 0;
-    if (addr%4 != 0) {
-        cpu->raise_exception(EXCEPTION_LOAD_ADDRESS_MISALIGNED, addr);
-        return;
-    } else if (addr>=ram_base && addr+3<ram_end) {
-        data = (int32_t)(uint32_t(cpu->memory[addr-ram_base+3])<<24 | uint32_t(cpu->memory[addr-ram_base+2])<<16 | uint32_t(cpu->memory[addr-ram_base+1])<<8 | uint32_t(cpu->memory[addr-ram_base]));
-        cpu->gpr[decode.rd] = data;
-    } else {
-        auto res = cpu->mmio_bus->mmio_read(addr, width_t::word);
-        if (res.has_value()) {
-            data = (int32_t)(*res);
-            cpu->gpr[decode.rd] = data;
-        } else {
-            cpu->raise_exception(EXCEPTION_LOAD_ACCESS_FAULT, addr);
-            return;
-        }
-    }
-    log_load;
+void rv32i_cpu_system::lb(rv32i_cpu_system* cpu, const decode_t& decode) {
+    cpu->load(decode, width_t::byte, true);
 }
 
-void rv32i_cpu_nemu::lbu(rv32i_cpu_nemu* cpu, const decode_t& decode) {
-    uint32_t addr = cpu->gpr[decode.rs1] + decode.imm;
-    uint32_t data = 0;
-    if (addr >= ram_base && addr < ram_end) {
-        data = cpu->memory[addr-ram_base];
-        cpu->gpr[decode.rd] = data;
-    } else {
-        auto res = cpu->mmio_bus->mmio_read(addr, width_t::byte);
-        if (res.has_value()) {
-            data = (uint8_t)(*res);
-            cpu->gpr[decode.rd] = data;
-        } else {
-            cpu->raise_exception(EXCEPTION_LOAD_ACCESS_FAULT, addr);
-            return;
-        }
-    }
-    log_load;
+void rv32i_cpu_system::lh(rv32i_cpu_system* cpu, const decode_t& decode) {
+    cpu->load(decode, width_t::half, true);
 }
 
-void rv32i_cpu_nemu::lhu(rv32i_cpu_nemu* cpu, const decode_t& decode) {
-    uint32_t addr = cpu->gpr[decode.rs1] + decode.imm;
-    uint32_t data = 0;
-    if (addr%2 != 0) {
-        cpu->raise_exception(EXCEPTION_LOAD_ADDRESS_MISALIGNED, addr);
-        return;
-    } else if (addr >= ram_base && addr + 1 < ram_end) {
-        data = uint16_t(cpu->memory[addr-ram_base+1])<<8 | uint16_t(cpu->memory[addr-ram_base]);
-        cpu->gpr[decode.rd] = data;
-    } else {
-        auto res = cpu->mmio_bus->mmio_read(addr, width_t::half);
-        if (res.has_value()) {
-            data = (uint16_t)(*res);
-            cpu->gpr[decode.rd] = data;
-        } else {
-            cpu->raise_exception(EXCEPTION_LOAD_ACCESS_FAULT, addr);
-            return;
-        }
-    }
-    log_load;
+void rv32i_cpu_system::lw(rv32i_cpu_system* cpu, const decode_t& decode) {
+    cpu->load(decode, width_t::word, false);
 }
 
-void rv32i_cpu_nemu::sb(rv32i_cpu_nemu* cpu, const decode_t& decode) {
-    uint32_t addr = cpu->gpr[decode.rs1] + decode.imm;
-    uint8_t data = cpu->gpr[decode.rs2] & 0xff;
-    if (addr>=ram_base && addr<ram_end) {
-        cpu->memory[addr-ram_base] = data;
-    } else {
-        bool res = cpu->mmio_bus->mmio_write(addr, width_t::byte, data);
-        if (!res) {
-            cpu->raise_exception(EXCEPTION_STORE_AMO_ACCESS_FAULT, addr);
-            return;
-        }
-    }
-    log_store;
+void rv32i_cpu_system::lbu(rv32i_cpu_system* cpu, const decode_t& decode) {
+    cpu->load(decode, width_t::byte, false);
 }
 
-void rv32i_cpu_nemu::sh(rv32i_cpu_nemu* cpu, const decode_t& decode) {
-    uint32_t addr = cpu->gpr[decode.rs1] + decode.imm;
-    uint16_t data = cpu->gpr[decode.rs2] & 0xffff;
-    if (addr%2 != 0) {
-        cpu->raise_exception(EXCEPTION_STORE_AMO_ADDRESS_MISALIGNED, addr);
-        return;
-    } else if (addr>=ram_base && addr+1<ram_end) {
-        cpu->memory[addr-ram_base] = data & 0xff;
-        cpu->memory[addr-ram_base+1] = data >> 8;
-    } else {
-        bool res = cpu->mmio_bus->mmio_write(addr, width_t::half, data);
-        if (!res) {
-            cpu->raise_exception(EXCEPTION_STORE_AMO_ACCESS_FAULT, addr);
-            return;
-        }
-    }
-    log_store;
+void rv32i_cpu_system::lhu(rv32i_cpu_system* cpu, const decode_t& decode) {
+    cpu->load(decode, width_t::half, false);
 }
 
-void rv32i_cpu_nemu::sw(rv32i_cpu_nemu* cpu, const decode_t& decode) {
-    uint32_t addr = cpu->gpr[decode.rs1] + decode.imm;
-    uint32_t data = cpu->gpr[decode.rs2];
-    if (addr%4 != 0) {
-        cpu->raise_exception(EXCEPTION_STORE_AMO_ADDRESS_MISALIGNED, addr);
-        return;
-    } else if (addr>=ram_base && addr+3<ram_end) {
-        cpu->memory[addr-ram_base] = data & 0xff;
-        cpu->memory[addr-ram_base+1] = (data>>8) & 0xff;
-        cpu->memory[addr-ram_base+2] = (data>>16) & 0xff;
-        cpu->memory[addr-ram_base+3] = (data>>24) & 0xff;
-    } else {
-        bool res = cpu->mmio_bus->mmio_write(addr, width_t::word, data);
-        if (!res) {
-            cpu->raise_exception(EXCEPTION_STORE_AMO_ACCESS_FAULT, addr);
-            return;
-        }
-    }
-    log_store;
+void rv32i_cpu_system::sb(rv32i_cpu_system* cpu, const decode_t& decode) {
+    cpu->store(decode, width_t::byte);
+}
+
+void rv32i_cpu_system::sh(rv32i_cpu_system* cpu, const decode_t& decode) {
+    cpu->store(decode, width_t::half);
+}
+
+void rv32i_cpu_system::sw(rv32i_cpu_system* cpu, const decode_t& decode) {
+    cpu->store(decode, width_t::word);
 }
