@@ -1,0 +1,104 @@
+#ifndef LIBCPU_ABSTRACT_CPU_HH
+#define LIBCPU_ABSTRACT_CPU_HH
+
+#include <cstddef>
+#include <cstdint>
+#include <libcpu/event.hh>
+#include <libvio/frontend.hh>
+#include <libvio/ringbuffer.hh>
+
+namespace libcpu {
+
+/**
+ * @brief Abstract base class for CPU simulator interface.
+ * 
+ * @tparam WORD_T The word type for the CPU (typically uint32_t or uint64_t)
+ * @tparam N_GPR The number of general purpose registers
+ * 
+ * This class provides the interface for a CPU simulator, including
+ * methods for accessing registers, memory, and controlling execution.
+ * It also maintains an event buffer for tracing CPU activity.
+ */
+template <typename WORD_T, size_t N_GPR>
+class abstract_cpu {
+    public:
+        using word_t = WORD_T;              ///< Type alias for the CPU word type
+        static constexpr size_t n_gpr = N_GPR;  ///< Number of general purpose registers
+
+        libvio::ringbuffer<event_t<WORD_T>> *event_buffer = nullptr;  ///< Buffer for storing CPU events. If nullptr, event tracing is off.
+
+        /**
+         * @brief Get the program counter value of the last instruction committed.
+         * @return The current program counter value
+         */
+        virtual WORD_T get_current_pc(void) const = 0;
+
+        /**
+         * @brief Get the program counter value of the the next instruction to be comitted.
+         * @return The next program counter value
+         */
+        virtual WORD_T get_next_pc(void) const = 0;
+
+        /**
+         * @brief Get a pointer to the general purpose register file
+         * @return Pointer to the register file array. `nullptr` if not supported.
+         */
+        virtual const WORD_T *get_gpr(void) const = 0;
+
+        /**
+         * @brief Get the value of a specific general purpose register
+         * @param addr Register address/index
+         * @return The value of the specified register
+         */
+        virtual WORD_T get_gpr(uint8_t addr) const = 0;
+
+        /**
+         * @brief Advance the CPU by one clock cycle
+         */
+        virtual void next_cycle(void) = 0;
+
+        /**
+         * @brief Advance the CPU until one more instruction is committed.
+         */
+        virtual void next_instruction(void) = 0;
+
+        /**
+         * @brief Convert virtual address to physical address
+         * @param vaddr Virtual address to convert
+         * @return Corresponding physical address, `nullopt` if not mapped
+         */
+        virtual std::optional<WORD_T> vaddr_to_paddr(WORD_T vaddr) const {
+            return vaddr;
+        }
+
+        /**
+         * @brief Read from virtual memory
+         * @param addr Virtual address to read from
+         * @param width Width of the read operation
+         * @return The value read from memory, `nullopt` if out of bound.
+         * @note This function will not read from a MMIO address.
+         *      If a MMIO address is provided, `nullopt` is returned.
+         */
+        virtual std::optional<WORD_T> vmem_read(WORD_T addr, libvio::width_t width) const {
+            auto paddr = vaddr_to_paddr(addr);
+            if (paddr.has_value()) {
+                return pmem_read(paddr.value(), width);
+            } else {
+                return {};
+            }
+        }
+
+        /**
+         * @brief Read from physical memory
+         * @param addr Physical address to read from
+         * @param width Width of the read operation
+         * @return The value read from memory, `nullopt` if out of bound.
+         * @note This function will not read from a MMIO address.
+         *      If a MMIO address is provided, `nullopt` is returned.
+         */
+        virtual std::optional<WORD_T> pmem_read(WORD_T addr, libvio::width_t width) const = 0;
+};
+
+}
+
+#endif
