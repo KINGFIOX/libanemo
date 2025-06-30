@@ -97,6 +97,12 @@ class abstract_cpu {
          *      If a MMIO address is provided, `nullopt` is returned.
          */
         virtual std::optional<WORD_T> pmem_read(WORD_T addr, libvio::width_t width) const = 0;
+
+        /**
+         * @brief Whether the execution has ended.
+         * @return Whether the CPU has stopped.
+         */
+        virtual bool stopped(void) const = 0;
 };
 
 }

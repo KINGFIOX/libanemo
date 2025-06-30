@@ -12,7 +12,7 @@ int main(int argc, char** argv) {
     cpu.mmio_bus = &libvio::nemu_bus::get_instance();
     cpu.memory.load_elf_from_file(argv[1]);
 
-    while (!cpu.get_ebreak()) {
+    while (!cpu.stopped()) {
         cpu.next_instruction();
     }
 

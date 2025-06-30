@@ -92,7 +92,7 @@ class rv32i_cpu_system: public abstract_cpu<uint32_t, 32> {
         void next_cycle(void) override;
         void next_instruction(void) override;
         void next_instruction_pre_decode(void);
-        bool get_ebreak(void) const;
+        bool stopped(void) const override;
 
         uint32_t csr_read(rv32i::csr_addr_t addr) const;
         uint32_t csr_read_bits(rv32i::csr_addr_t addr, uint32_t bit_mask) const;

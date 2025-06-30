@@ -40,3 +40,7 @@ const uint32_t* rv32i_cpu_system::get_gpr(void) const {
 std::optional<rv32i_cpu_system::word_t> rv32i_cpu_system::pmem_read(word_t addr, libvio::width_t width) const {
     return memory.read(addr, width);
 }
+
+bool rv32i_cpu_system::stopped(void) const {
+    return ebreak_flag;
+}

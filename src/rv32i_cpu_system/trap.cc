@@ -46,10 +46,6 @@ void rv32i_cpu_system::mret(rv32i_cpu_system* cpu, const decode_t& decode) {
     cpu->csr_clear_bits(CSR_ADDR_MSTATUS, MSTATUS_BIT_MPPH|MSTATUS_BIT_MPPL);
 }
 
-bool rv32i_cpu_system::get_ebreak(void) const {
-    return ebreak_flag;
-}
-
 // returns the pc of the next instruction
 uint32_t rv32i_cpu_system::handle_trap(void) {
     // handle exceptions
