@@ -12,8 +12,6 @@ void rv32i_cpu_system::next_cycle(void) {
 }
 
 void rv32i_cpu_system::next_instruction(void) {
-    old_pc = pc;
-
     if (pc%4 != 0) {
         raise_exception(EXCEPTION_INSTRUCTION_ADDRESS_MISALIGNED, pc);
         return;

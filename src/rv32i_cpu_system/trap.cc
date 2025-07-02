@@ -80,7 +80,7 @@ uint32_t rv32i_cpu_system::handle_trap(void) {
             return next_pc;
         }
         uint32_t mie = csr_read(CSR_ADDR_MIE);
-        for (uint32_t cause=0; cause<n_interrupts; ++cause) {
+        for (uint32_t cause=0; cause<n_interrupt; ++cause) {
             if ((mip>>cause)&1 && (mie>>cause)&1) {
                 // set MPP and MPIE
                 csr_write_bits(CSR_ADDR_MSTATUS, static_cast<uint32_t>(priv_level)<<11, MSTATUS_BIT_MPPH|MSTATUS_BIT_MPPL);
@@ -119,7 +119,7 @@ void rv32i_cpu_system::raise_exception(mcause_t mcause_code, uint32_t mtval) {
 }
 
 void rv32i_cpu_system::raise_interrupt(mcause_t mcause_code) {
-    if (mcause_code < n_interrupts) {
+    if (mcause_code < n_interrupt) {
         csr_set_bits(CSR_ADDR_MIP, 1<<mcause_code);
     }
 }

@@ -4,49 +4,14 @@
 // In this file, some architecture dependent but implementation independent constants are defined
 
 #include <cstdint>
+#include <libcpu/riscv.hh>
 #include <libvio/frontend.hh>
 
 namespace libcpu::rv32i {
 
 using width_t = libvio::width_t;
-
-enum class priv_level_t{
-    u = 0,
-    h = 1,
-    s = 2,
-    m = 3,
-};
-
-enum class event_type_t: uint32_t {
-    // type    // val1         // val2
-    issue,     // instruction  // 0
-    reg_write, // rd addr      // rd data
-    load,      // addr         // data
-    store,     // addr         // data
-    call,      // target addr  // stack pointer
-    ret,       // target addr  // stack pointer
-    trap,      // mcause       // mtval
-    mret,      // target addr  // mstatus
-    error,     // event_type_t // instruction
-};
-
-struct event_t {
-    event_type_t type;
-    uint32_t pc;
-    uint32_t val1;
-    uint32_t val2;
-};
-
-static inline bool operator==(const event_t& lhs, const event_t& rhs) {
-    return lhs.type == rhs.type
-        && lhs.pc == rhs.pc
-        && lhs.val1 == rhs.val1
-        && lhs.val2 == rhs.val2;
-}
-
-static inline bool operator!=(const event_t& lhs, const event_t& rhs) {
-    return !(lhs == rhs);
-}
+using priv_level_t = riscv::priv_level_t;
+using gpr_addr_t = riscv::gpr_addr_t;
 
 enum csr_addr_t {
     CSR_ADDR_MSTATUS  = 0x300,  // Purr-ivilege mode status

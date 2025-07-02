@@ -1,5 +1,6 @@
 #include <libvio/nemu_interface.hh>
 #include <libcpu/rv32i_cpu_system.hh>
+#include <libcpu/difftest.hh>
 #include <iostream>
 
 int main(int argc, char** argv) {

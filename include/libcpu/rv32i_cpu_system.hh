@@ -15,12 +15,13 @@
 
 namespace libcpu {
 
-class rv32i_cpu_system: public abstract_cpu<uint32_t, 32> {
+class rv32i_cpu_system: public abstract_cpu_system<uint32_t, 32> {
 
     public:
 
         static constexpr size_t n_csr = 10;
-        static constexpr size_t n_interrupts = 16;
+        static constexpr size_t n_gpr = 32;
+        static constexpr size_t n_interrupt = 16;
         static constexpr word_t mem_base = 0x80000000;
 
         using decode_t = struct decode_t {
@@ -33,10 +34,10 @@ class rv32i_cpu_system: public abstract_cpu<uint32_t, 32> {
         };
 
         using csr_info_t = struct csr_info_t {
-            uint32_t init_value;
-            uint32_t wpri_mask; // The and mask when writing with csr operation instructions.
-            const char *name;
-            rv32i::csr_addr_t addr;
+            uint32_t init_value; ///< Initial value on boot
+            uint32_t wpri_mask; ///< The and mask when writing with csr operation instructions.
+            const char *name; ///< Name of the CSR
+            rv32i::csr_addr_t addr; ///< Address of the CSR
         };
 
         static const csr_info_t csr_info[n_csr];
@@ -46,7 +47,6 @@ class rv32i_cpu_system: public abstract_cpu<uint32_t, 32> {
         std::array<uint32_t, n_gpr> gpr;
         std::array<uint32_t, n_csr> csr;
         uint32_t pc = mem_base;
-        uint32_t old_pc = mem_base;
         uint32_t next_pc;
         rv32i::priv_level_t priv_level;
 
@@ -79,12 +79,9 @@ class rv32i_cpu_system: public abstract_cpu<uint32_t, 32> {
 
         contiguous_memory<word_t> memory;
 
-        libvio::bus *mmio_bus = nullptr; ///< The virtual MMIO bus. If nullptr, MMIO is disabled.
-
         uint32_t get_gpr(uint8_t gpr_addr) const override;
         const uint32_t *get_gpr(void) const override;
-        uint32_t get_current_pc(void) const override;
-        uint32_t get_next_pc(void) const override;
+        uint32_t get_pc(void) const override;
         rv32i::priv_level_t get_priv_level(void) const;
 
         rv32i_cpu_system(size_t memory_size);

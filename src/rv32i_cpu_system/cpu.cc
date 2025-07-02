@@ -21,11 +21,7 @@ uint32_t rv32i_cpu_system::get_gpr(uint8_t gpr_addr) const {
     return gpr[gpr_addr];
 }
 
-uint32_t rv32i_cpu_system::get_current_pc(void) const {
-    return old_pc;
-}
-
-uint32_t rv32i_cpu_system::get_next_pc(void) const {
+uint32_t rv32i_cpu_system::get_pc(void) const {
     return pc;
 }
 

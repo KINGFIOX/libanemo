@@ -1,9 +1,9 @@
 #ifndef LIBCPU_ABSTRACT_CPU_HH
 #define LIBCPU_ABSTRACT_CPU_HH
 
-#include <cstddef>
 #include <cstdint>
 #include <libcpu/event.hh>
+#include <libvio/bus.hh>
 #include <libvio/frontend.hh>
 #include <libvio/ringbuffer.hh>
 
@@ -13,31 +13,24 @@ namespace libcpu {
  * @brief Abstract base class for CPU simulator interface.
  * 
  * @tparam WORD_T The word type for the CPU (typically uint32_t or uint64_t)
- * @tparam N_GPR The number of general purpose registers
  * 
  * This class provides the interface for a CPU simulator, including
  * methods for accessing registers, memory, and controlling execution.
  * It also maintains an event buffer for tracing CPU activity.
  */
-template <typename WORD_T, size_t N_GPR>
+template <typename WORD_T, uint8_t N_GPR>
 class abstract_cpu {
     public:
         using word_t = WORD_T;              ///< Type alias for the CPU word type
-        static constexpr size_t n_gpr = N_GPR;  ///< Number of general purpose registers
+        const uint8_t n_gpr = N_GPR;
 
         libvio::ringbuffer<event_t<WORD_T>> *event_buffer = nullptr;  ///< Buffer for storing CPU events. If nullptr, event tracing is off.
-
-        /**
-         * @brief Get the program counter value of the last instruction committed.
-         * @return The current program counter value
-         */
-        virtual WORD_T get_current_pc(void) const = 0;
 
         /**
          * @brief Get the program counter value of the the next instruction to be comitted.
          * @return The next program counter value
          */
-        virtual WORD_T get_next_pc(void) const = 0;
+        virtual WORD_T get_pc(void) const = 0;
 
         /**
          * @brief Get a pointer to the general purpose register file
@@ -103,6 +96,12 @@ class abstract_cpu {
          * @return Whether the CPU has stopped.
          */
         virtual bool stopped(void) const = 0;
+};
+
+template <typename WORD_T, uint8_t N_GPR>
+class abstract_cpu_system: public abstract_cpu<WORD_T, N_GPR> {
+    public:
+        libvio::bus *mmio_bus = nullptr; ///< The virtual MMIO bus. If nullptr, MMIO is disabled.
 };
 
 }

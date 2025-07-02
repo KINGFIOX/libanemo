@@ -2,6 +2,7 @@
 #include <libcpu/rv32i.hh>
 #include <libcpu/rv32i_cpu_system.hh>
 #include <libvio/frontend.hh>
+#include <libvio/width.hh>
 #include <optional>
 
 // In this file, memory access instructions are implemented.
@@ -46,7 +47,7 @@ void rv32i_cpu_system::load(const decode_t &decode, width_t width, bool sign_ext
 
 void rv32i_cpu_system::store(const decode_t &decode, width_t width) {
     word_t addr = gpr[decode.rs1] + decode.imm;
-    word_t data = gpr[decode.rs2];
+    word_t data = zero_truncate<uint32_t>(gpr[decode.rs2], width);
     bool success = memory.write(addr, width, data);
     // fall back to MMIO
     if (!success && mmio_bus!=nullptr) {
