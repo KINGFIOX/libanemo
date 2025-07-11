@@ -8,13 +8,10 @@ include_directories(SYSTEM ${libvioDir}/include)
 
 include_directories(SYSTEM "include")
 
-file(GLOB_RECURSE "NEMUCORE_SRCS" "src/rv32i_cpu_system/*.cc")
+file(GLOB_RECURSE "NEMUCORE_SRCS" "src/libcpu/rv32i_cpu_system/*.cc")
 
 add_library(nemucore STATIC "${NEMUCORE_SRCS}")
 set_target_properties(nemucore PROPERTIES POSITION_INDEPENDENT_CODE ON)
-
-# add_library(difftest STATIC src/difftest.cc)
-# set_target_properties(difftest PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 add_executable(nemu-minimal src/main.cc)
 target_link_libraries(nemu-minimal PRIVATE nemucore vio)
