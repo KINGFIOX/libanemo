@@ -15,27 +15,26 @@
 
 namespace libcpu {
 
-class rv32i_cpu_system: public abstract_cpu_system<uint32_t, 32> {
+class rv32i_cpu_system: public abstract_cpu<uint32_t> {
 
     public:
 
         static constexpr size_t n_csr = 10;
-        static constexpr size_t n_gpr = 32;
         static constexpr size_t n_interrupt = 16;
         static constexpr word_t mem_base = 0x80000000;
 
         using decode_t = struct decode_t {
             void (*op)(rv32i_cpu_system* cpu, const decode_t& decode);
-            uint32_t instr;
-            uint32_t imm;
+            word_t instr;
+            word_t imm;
             uint_fast8_t rs1;
             uint_fast8_t rs2;
             uint_fast8_t rd;
         };
 
         using csr_info_t = struct csr_info_t {
-            uint32_t init_value; ///< Initial value on boot
-            uint32_t wpri_mask; ///< The and mask when writing with csr operation instructions.
+            word_t init_value; ///< Initial value on boot
+            word_t wpri_mask; ///< The and mask when writing with csr operation instructions.
             const char *name; ///< Name of the CSR
             rv32i::csr_addr_t addr; ///< Address of the CSR
         };
@@ -44,44 +43,47 @@ class rv32i_cpu_system: public abstract_cpu_system<uint32_t, 32> {
 
     private:
         // architectural state
-        std::array<uint32_t, n_gpr> gpr;
-        std::array<uint32_t, n_csr> csr;
-        uint32_t pc = mem_base;
-        uint32_t next_pc;
+        std::array<word_t, 32> gpr;
+        std::array<word_t, n_csr> csr;
+        word_t pc = mem_base;
+        word_t next_pc;
         rv32i::priv_level_t priv_level;
 
-        uint32_t instruction;
+        word_t instruction;
 
         std::vector<decode_t> decode_cache;
 
         bool exception_flag = false;
         bool ebreak_flag = false;
-        uint32_t exception_cause;
-        uint32_t exception_mtval;
+        word_t exception_cause;
+        word_t exception_mtval;
+        std::optional<word_t> next_trap = {};  
 
         // helper functions for memory operations
         void load(const decode_t &decode, libvio::width_t width, bool sign_extend);
         void store(const decode_t &decode, libvio::width_t width);
 
-        void raise_exception(rv32i::mcause_t mcause, uint32_t mtval);
-        uint32_t handle_trap(void);
+        void raise_exception(rv32i::mcause_t mcause, word_t mtval);
+        word_t handle_trap(void);
 
         // csr operations with no permmission check
         // used for emulating a hardware writing a csr
         bool csr_check_read_access(rv32i::csr_addr_t addr) const;
         bool csr_check_write_access(rv32i::csr_addr_t addr) const;
-        void csr_write(rv32i::csr_addr_t addr, uint32_t value);
-        void csr_write_bits(rv32i::csr_addr_t addr, uint32_t value, uint32_t bit_mask);
-        void csr_set_bits(rv32i::csr_addr_t addr, uint32_t bits);
-        void csr_clear_bits(rv32i::csr_addr_t addr, uint32_t bits);
+        void csr_write(rv32i::csr_addr_t addr, word_t value);
+        void csr_write_bits(rv32i::csr_addr_t addr, word_t value, word_t bit_mask);
+        void csr_set_bits(rv32i::csr_addr_t addr, word_t bits);
+        void csr_clear_bits(rv32i::csr_addr_t addr, word_t bits);
 
     public:
 
         contiguous_memory<word_t> memory;
 
-        uint32_t get_gpr(uint8_t gpr_addr) const override;
-        const uint32_t *get_gpr(void) const override;
-        uint32_t get_pc(void) const override;
+        size_t n_gpr(void) const override;
+
+        word_t get_gpr(uint8_t gpr_addr) const override;
+        const word_t *get_gpr(void) const override;
+        word_t get_pc(void) const override;
         rv32i::priv_level_t get_priv_level(void) const;
 
         rv32i_cpu_system(size_t memory_size);
@@ -91,13 +93,15 @@ class rv32i_cpu_system: public abstract_cpu_system<uint32_t, 32> {
         void next_instruction_pre_decode(void);
         bool stopped(void) const override;
 
-        uint32_t csr_read(rv32i::csr_addr_t addr) const;
-        uint32_t csr_read_bits(rv32i::csr_addr_t addr, uint32_t bit_mask) const;
+        word_t csr_read(rv32i::csr_addr_t addr) const;
+        word_t csr_read_bits(rv32i::csr_addr_t addr, word_t bit_mask) const;
 
         void pre_decode(void);
-        static decode_t decode_instruction(uint32_t instruction);
+        static decode_t decode_instruction(word_t instruction);
 
         std::optional<word_t> pmem_read(word_t addr, libvio::width_t width) const override;
+
+        std::optional<word_t> get_trap(void) const override;
 
     protected:
         

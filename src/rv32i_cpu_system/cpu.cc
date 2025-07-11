@@ -8,7 +8,7 @@ using namespace libcpu;
 using namespace libcpu::rv32i;
 
 rv32i_cpu_system::rv32i_cpu_system(size_t memory_size): memory(mem_base, memory_size) {
-    for (size_t i=0; i<n_gpr; ++i) {
+    for (size_t i=0; i<32; ++i) {
         gpr[i] = 0;
     }
     for (size_t i=0; i<n_csr; ++i) {
@@ -16,6 +16,10 @@ rv32i_cpu_system::rv32i_cpu_system(size_t memory_size): memory(mem_base, memory_
     }
     priv_level = priv_level_t::m;
 };
+
+size_t rv32i_cpu_system::n_gpr(void) const {
+    return 32;
+}
 
 uint32_t rv32i_cpu_system::get_gpr(uint8_t gpr_addr) const {
     return gpr[gpr_addr];
@@ -39,4 +43,8 @@ std::optional<rv32i_cpu_system::word_t> rv32i_cpu_system::pmem_read(word_t addr,
 
 bool rv32i_cpu_system::stopped(void) const {
     return ebreak_flag;
+}
+
+std::optional<rv32i_cpu_system::word_t> rv32i_cpu_system::get_trap(void) const {
+    return next_trap;
 }

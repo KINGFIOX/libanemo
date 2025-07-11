@@ -20,12 +20,23 @@ namespace libcpu {
  * 
  * This class provides the interface for comparing the behavior of multiple CPU implementations.
  */
-template <typename WORD_T, uint8_t N_GPR>
-class abstract_difftest: public abstract_cpu<WORD_T, N_GPR> {
+template <typename WORD_T>
+class abstract_difftest: public abstract_cpu<WORD_T> {
     public:
-        using cpu_t = abstract_cpu<WORD_T, N_GPR>;
+        using cpu_t = abstract_cpu<WORD_T>;
 
-        abstract_difftest(std::initializer_list<cpu_t*> cpu_list): cpus(cpu_list) {}
+        abstract_difftest(std::initializer_list<cpu_t*> cpu_list): cpus(cpu_list) {
+            // running difftest on CPUs with different numbers of registers is allowed
+            // for example, between RV32I and RV32E
+            // but the number of available registers need to be limited to the smallest one
+            for (auto cpu: cpus) {
+                min_n_gpr = std::min(min_n_gpr, cpu->n_gpr());
+            }
+        }
+
+        size_t n_gpr(void) const override {
+            return min_n_gpr;
+        }
 
         WORD_T get_pc(void) const override {
             return cpus[0]->get_pc();
@@ -58,9 +69,12 @@ class abstract_difftest: public abstract_cpu<WORD_T, N_GPR> {
         */
         virtual bool get_difftest_error(void) const = 0;
 
-        bool stopped(void) const override {
+        virtual bool stopped(void) const override {
             return get_difftest_error() || cpus[0]->stopped();
         }
+
+    private:
+        size_t min_n_gpr = SIZE_MAX;
 
     protected:
         std::vector<cpu_t*> cpus = {};
@@ -79,10 +93,10 @@ class abstract_difftest: public abstract_cpu<WORD_T, N_GPR> {
  * For example, if multiple registers are written by the same instruction, or instructions are issued out of order,
  * a false positive will be reported. 
  */
-template <typename WORD_T, uint8_t N_GPR>
-class ordered_difftest: public abstract_difftest<WORD_T, N_GPR> {
+template <typename WORD_T>
+class ordered_difftest: public abstract_difftest<WORD_T> {
     public:
-        using cpu_t = abstract_cpu<WORD_T, N_GPR>;
+        using cpu_t = abstract_cpu<WORD_T>;
         using event_buffer_t = libvio::ringbuffer<event_t<WORD_T>>;
 
     private:
@@ -90,7 +104,7 @@ class ordered_difftest: public abstract_difftest<WORD_T, N_GPR> {
         bool difftest_error = false;
 
     public:
-        ordered_difftest(std::initializer_list<cpu_t*> cpu_list): abstract_difftest<WORD_T, N_GPR>(cpu_list) {
+        ordered_difftest(std::initializer_list<cpu_t*> cpu_list): abstract_difftest<WORD_T>(cpu_list) {
             buffer_index.resize(cpu_list.size());
             std::fill(buffer_index.begin(), buffer_index.end(), 0);
         }

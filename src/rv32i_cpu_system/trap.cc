@@ -68,8 +68,9 @@ uint32_t rv32i_cpu_system::handle_trap(void) {
             event_buffer->push_back({.type=event_type_t::trap, .pc=pc, .val1=exception_cause, .val2=exception_mtval});
         }
         priv_level = priv_level_t::m;
+        next_trap = {csr_read(CSR_ADDR_MCAUSE)};
         return vector_base;
-    } 
+    }
     
     // handle interrupts
     uint32_t mip = csr[0]; // csr_read(CSR_ADDR_MIP) is slower
@@ -101,6 +102,7 @@ uint32_t rv32i_cpu_system::handle_trap(void) {
                     event_buffer->push_back({.type=event_type_t::trap, .pc=next_pc, .val1=cause|MCAUSE_BIT_INTERRUPT, .val2=0});
                 }
                 priv_level = priv_level_t::m;
+                next_trap = {csr_read(CSR_ADDR_MCAUSE)};
                 if (is_vectord) {
                     return vector_base + cause*4;
                 } else {
@@ -109,6 +111,7 @@ uint32_t rv32i_cpu_system::handle_trap(void) {
             }
         }
     }
+    next_trap = {};
     return next_pc;
 }
 

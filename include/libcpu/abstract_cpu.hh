@@ -1,8 +1,10 @@
 #ifndef LIBCPU_ABSTRACT_CPU_HH
 #define LIBCPU_ABSTRACT_CPU_HH
 
+#include <cstddef>
 #include <cstdint>
 #include <libcpu/event.hh>
+#include <libcpu/memory.hh>
 #include <libvio/bus.hh>
 #include <libvio/frontend.hh>
 #include <libvio/ringbuffer.hh>
@@ -18,13 +20,20 @@ namespace libcpu {
  * methods for accessing registers, memory, and controlling execution.
  * It also maintains an event buffer for tracing CPU activity.
  */
-template <typename WORD_T, uint8_t N_GPR>
+template <typename WORD_T>
 class abstract_cpu {
     public:
         using word_t = WORD_T;              ///< Type alias for the CPU word type
-        const uint8_t n_gpr = N_GPR;
 
         libvio::ringbuffer<event_t<WORD_T>> *event_buffer = nullptr;  ///< Buffer for storing CPU events. If nullptr, event tracing is off.
+
+        libvio::bus *mmio_bus = nullptr; ///< The virtual MMIO bus. If nullptr, MMIO is disabled. Ignored on user-space emulators.
+
+        /**
+         * @brief Get the number of the general purpose registers.
+         * @return The number of the general purpose registers.
+         */
+        virtual size_t n_gpr(void) const = 0;
 
         /**
          * @brief Get the program counter value of the the next instruction to be comitted.
@@ -51,10 +60,34 @@ class abstract_cpu {
         virtual void next_cycle(void) = 0;
 
         /**
-         * @brief Advance the CPU until one more instruction is committed.
+         * @brief Advance the CPU by n clock cycles
+         * @param n The number of cycles to advance
+         */
+        virtual void next_cycle(size_t n) {
+            for (size_t i=0; i<n; ++i) {
+                next_cycle();
+            }
+        }
+
+        /**
+         * @brief Advance the CPU until at least one more instruction is committed.
+         * @note On superscalar CPUs, this function may execute more than one instruction.
+         *      Self-traps are counted as commited.
          */
         virtual void next_instruction(void) = 0;
 
+        /**
+         * @brief Advance the CPU until at least n more instructions are committed.
+         * @param n The number of instructions to execute
+         * @note On superscalar CPUs, this function may execute more than n instructions.
+         *      Self-traps are counted as commited.
+         */
+        virtual void next_instruction(size_t n) {
+            for (auto i=0; i<n; ++i) {
+                next_instruction();
+            }
+        };
+        
         /**
          * @brief Convert virtual address to physical address
          * @param vaddr Virtual address to convert
@@ -96,12 +129,12 @@ class abstract_cpu {
          * @return Whether the CPU has stopped.
          */
         virtual bool stopped(void) const = 0;
-};
 
-template <typename WORD_T, uint8_t N_GPR>
-class abstract_cpu_system: public abstract_cpu<WORD_T, N_GPR> {
-    public:
-        libvio::bus *mmio_bus = nullptr; ///< The virtual MMIO bus. If nullptr, MMIO is disabled.
+        /**
+         * @brief Get the next trap to handle.
+         * @return Some value, whose meaning depends on implementation, if at least one trap to handle, or `nullopt` if no trap.
+         */
+        virtual std::optional<WORD_T> get_trap(void) const = 0;
 };
 
 }
