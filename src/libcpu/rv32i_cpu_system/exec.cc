@@ -18,13 +18,13 @@ void rv32i_cpu_system::next_instruction(void) {
     }
     
     auto instruction_opt = instr_bus->read(pc, libvio::width_t::word);
-    if (! instruction_opt.has_value()) {
+    if (!instruction_opt.has_value()) {
         raise_exception(rv32i::EXCEPTION_INSTRUCTION_ACCESS_FAULT, pc);
         return;
     }
 
     uint32_t instruction = instruction_opt.value();
-    size_t decode_cache_offset = (pc>>2) & decode_cache_offset;
+    size_t decode_cache_offset = (pc>>2) & decode_cache_addr_mask;
     decode_t decode;
     // if there is a cache invalidation, update the cache
     decode = decode_cache[decode_cache_offset];

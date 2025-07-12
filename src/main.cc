@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <libcpu/cache.hh>
 #include <libvio/nemu_interface.hh>
 #include <libcpu/rv32i_cpu_system.hh>
 #include <libcpu/memory.hh>
@@ -13,8 +14,12 @@ int main(int argc, char** argv) {
     libcpu::rv32i_cpu_system cpu;
     libcpu::contiguous_memory<uint32_t> memory{0x80000000, 128*1024*1024};
     memory.load_elf_from_file(argv[1]);
-    cpu.instr_bus = &memory;
-    cpu.data_bus = &memory;
+    libcpu::direct_cache<uint32_t, 4, 6> icache;
+    libcpu::direct_cache<uint32_t, 8, 8> dcache;
+    icache.underlying_memory = &memory;
+    dcache.underlying_memory = &memory;
+    cpu.instr_bus = &icache;
+    cpu.data_bus = &dcache;
     cpu.mmio_bus = &libvio::nemu_bus::get_instance();
     cpu.reset(0x80000000);
 
