@@ -7,14 +7,17 @@
 using namespace libcpu;
 using namespace libcpu::rv32i;
 
-rv32i_cpu_system::rv32i_cpu_system(size_t memory_size): memory(mem_base, memory_size) {
+void rv32i_cpu_system::reset(word_t init_pc) {
     for (size_t i=0; i<32; ++i) {
         gpr[i] = 0;
     }
     for (size_t i=0; i<n_csr; ++i) {
         csr[i] = csr_info[i].init_value;
     }
+    pc = init_pc;
     priv_level = priv_level_t::m;
+    decode_cache.resize(4096);
+    decode_cache_addr_mask = 0xfff;
 };
 
 size_t rv32i_cpu_system::n_gpr(void) const {
@@ -37,8 +40,8 @@ const uint32_t* rv32i_cpu_system::get_gpr(void) const {
     return gpr.data();
 };
 
-std::optional<rv32i_cpu_system::word_t> rv32i_cpu_system::pmem_read(word_t addr, libvio::width_t width) const {
-    return memory.read(addr, width);
+std::optional<rv32i_cpu_system::word_t> rv32i_cpu_system::pmem_peek(word_t addr, libvio::width_t width) const {
+    return data_bus->peek(addr, width);
 }
 
 bool rv32i_cpu_system::stopped(void) const {

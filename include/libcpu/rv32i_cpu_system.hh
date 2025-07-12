@@ -21,7 +21,6 @@ class rv32i_cpu_system: public abstract_cpu<uint32_t> {
 
         static constexpr size_t n_csr = 10;
         static constexpr size_t n_interrupt = 16;
-        static constexpr word_t mem_base = 0x80000000;
 
         using decode_t = struct decode_t {
             void (*op)(rv32i_cpu_system* cpu, const decode_t& decode);
@@ -45,13 +44,14 @@ class rv32i_cpu_system: public abstract_cpu<uint32_t> {
         // architectural state
         std::array<word_t, 32> gpr;
         std::array<word_t, n_csr> csr;
-        word_t pc = mem_base;
+        word_t pc;
         word_t next_pc;
         rv32i::priv_level_t priv_level;
 
         word_t instruction;
 
         std::vector<decode_t> decode_cache;
+        word_t decode_cache_addr_mask;
 
         bool exception_flag = false;
         bool ebreak_flag = false;
@@ -77,8 +77,8 @@ class rv32i_cpu_system: public abstract_cpu<uint32_t> {
 
     public:
 
-        contiguous_memory<word_t> memory;
-
+        void reset(word_t init_pc) override;
+        
         size_t n_gpr(void) const override;
 
         word_t get_gpr(uint8_t gpr_addr) const override;
@@ -86,20 +86,16 @@ class rv32i_cpu_system: public abstract_cpu<uint32_t> {
         word_t get_pc(void) const override;
         rv32i::priv_level_t get_priv_level(void) const;
 
-        rv32i_cpu_system(size_t memory_size);
-
         void next_cycle(void) override;
         void next_instruction(void) override;
-        void next_instruction_pre_decode(void);
         bool stopped(void) const override;
 
         word_t csr_read(rv32i::csr_addr_t addr) const;
         word_t csr_read_bits(rv32i::csr_addr_t addr, word_t bit_mask) const;
 
-        void pre_decode(void);
         static decode_t decode_instruction(word_t instruction);
 
-        std::optional<word_t> pmem_read(word_t addr, libvio::width_t width) const override;
+        std::optional<word_t>pmem_peek(word_t addr, libvio::width_t width) const override;
 
         std::optional<word_t> get_trap(void) const override;
 

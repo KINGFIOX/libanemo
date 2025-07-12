@@ -27,26 +27,58 @@ template <typename WORD_T>
 class abstract_memory {
 public:
     /**
-     * @brief Read from memory at the specified address.
+     * @brief Read from memory at the specified address. This might have side-effects like caching.
      * 
      * @param addr The memory address to read from.
      * @param width The width of the data to read.
      * @param little_endian If true, use little-endian byte ordering (default).
      *                      If false, use big-endian byte ordering.
      * @return std::optional<WORD_T> The zero extended read value if successful, or std::nullopt if failed.
+     *
+     * @note This function is designed for similating the memory access mechanism.
+     *      To read the memory content for debugging, use `peek()` or `host_addr()`.
      */
-    virtual std::optional<WORD_T> read(WORD_T addr, libvio::width_t width, bool little_endian=true) const = 0;
+    virtual std::optional<WORD_T> read(WORD_T addr, libvio::width_t width, bool little_endian=true) = 0;
 
     /**
-     * @brief Write to memory at the specified address.
+     * @brief Read from memory at the specified address. This has no side-effects like caching.
+     * 
+     * @param addr The memory address to read from.
+     * @param width The width of the data to read.
+     * @param little_endian If true, use little-endian byte ordering (default).
+     *                      If false, use big-endian byte ordering.
+     * @return std::optional<WORD_T> The zero extended read value if successful, or std::nullopt if failed.
+     *
+     * @note This function is designed to access the memory content for debugging.
+     */
+    virtual std::optional<WORD_T> peek(WORD_T addr, libvio::width_t width, bool little_endian=true) const = 0;
+
+    /**
+     * @brief Write to memory at the specified address. This might have side-effects like caching.
      * 
      * @param addr The memory address to write to.
      * @param width The width of the data to write.
      * @param little_endian If true, use little-endian byte ordering (default).
      *                      If false, use big-endian byte ordering.
      * @return bool True if the write was successful, false otherwise.
+     *
+     * @note This function is designed for similating the memory access mechanism.
+     *      To write the memory content for debugging or initailizing, use `set()` or `host_addr()`.
      */
     virtual bool write(WORD_T addr, libvio::width_t width, WORD_T value, bool little_endian=true) = 0;
+
+    /**
+     * @brief Write to memory at the specified address. This has no side-effects like caching.
+     * 
+     * @param addr The memory address to write to.
+     * @param width The width of the data to write.
+     * @param little_endian If true, use little-endian byte ordering (default).
+     *                      If false, use big-endian byte ordering.
+     * @return bool True if the write was successful, false otherwise.
+     *
+     * @note This function is designed for debugging or initailizing.
+     */
+    virtual bool set(WORD_T addr, libvio::width_t width, WORD_T value, bool little_endian=true) = 0;
 
     /**
      * @brief Get a pointer to the host memory at the specified address.
@@ -55,6 +87,9 @@ public:
      * @param value The value to write.
      * @return uint8_t* Pointer to the host memory at the specified address,
      *                  or nullptr if the address is invalid or this operation is not supported.
+     *
+     * @note This is intended to provide a convenient and effective way for the debugger to access the memory content.
+     *      It has no magic to trigger side-effects like caching.
      */
     virtual uint8_t *host_addr(WORD_T addr) = 0;
 
@@ -70,6 +105,8 @@ public:
      * 
      * @param filename The name of the file to restore from.
      * @returns The actual size loaded.
+     *
+     * @note Different subclasses can use different formats for its checkpoint files.
      */
     virtual WORD_T restore(const char *filename) = 0;
 
@@ -170,63 +207,11 @@ class contiguous_memory: public abstract_memory<WORD_T> {
             return size;
         }
 
-        /**
-        * @brief Read from memory at the specified offset.
-        * 
-        * @param addr The memory offset to read from.
-        * @param width The width of the data to read.
-        * @param little_endian If true, use little-endian byte ordering (default).
-        *                      If false, use big-endian byte ordering.
-        * @return std::optional<WORD_T> The read value if successful, or std::nullopt if failed.
-        */
-        std::optional<WORD_T> read_offset(WORD_T offset, libvio::width_t width, bool little_endian=true) const {
-            size_t w = static_cast<size_t>(width);
-            if (offset+static_cast<WORD_T>(width) > size) {
-                return {};
-            }
-
-            WORD_T value = 0;
-            if (little_endian) {
-                for (size_t i = 0; i<w; i++) {
-                    value |= static_cast<WORD_T>(mem[offset+i]) << (i*8);
-                }
-            } else {
-                for (size_t i = 0; i<w; i++) {
-                    value = (value << 8) | mem[offset+i];
-                }
-            }
-            return value;
+        std::optional<WORD_T> read(WORD_T addr, libvio::width_t width, bool little_endian=true) override {
+            return peek(addr, width, little_endian);
         }
-
-        /**
-        * @brief Write to memory at the specified offset.
-        * 
-        * @param addr The memory offset to write to.
-        * @param width The width of the data to write.
-        * @param little_endian If true, use little-endian byte ordering (default).
-        *                      If false, use big-endian byte ordering.
-        * @return bool True if the write was successful, false otherwise.
-        */
-        bool write_offset(WORD_T offset, WORD_T value, libvio::width_t width, bool little_endian=true) {
-            size_t w = static_cast<size_t>(width);
-            if (offset+static_cast<WORD_T>(width) > size) {
-                return {};
-            }
-
-            if (little_endian) {
-                for (size_t i = 0; i<w; i++) {
-                    mem[offset+i] = (value >> (i*8)) & 0xFF;
-                }
-            } else {
-                for (size_t i = 0; i<w; i++) {
-                    mem[offset+i] = (value >> ((w-1-i)*8)) & 0xFF;
-                }
-            }
-            return true;
-        }
-
     
-        std::optional<WORD_T> read(WORD_T addr, libvio::width_t width, bool little_endian=true) const override {
+        std::optional<WORD_T> peek(WORD_T addr, libvio::width_t width, bool little_endian=true) const override {
             if (out_of_bound(addr, width)) {
                 return {};
             }
@@ -248,6 +233,10 @@ class contiguous_memory: public abstract_memory<WORD_T> {
         }
 
         bool write(WORD_T addr, libvio::width_t width, WORD_T value, bool little_endian=true) override {
+            return set(addr, width, value, little_endian);
+        }
+
+        bool set(WORD_T addr, libvio::width_t width, WORD_T value, bool little_endian=true) override {
             size_t start_offset = addr - base;
             size_t w = static_cast<size_t>(width);
             

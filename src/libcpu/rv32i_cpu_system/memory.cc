@@ -13,7 +13,7 @@ using namespace libcpu::rv32i;
 
 void rv32i_cpu_system::load(const decode_t &decode, width_t width, bool sign_extend) {
     uint32_t addr = gpr[decode.rs1] + decode.imm;
-    auto data_opt = memory.read(addr, width);
+    auto data_opt = data_bus->read(addr, width);
     // fall back to MMIO if the address is out of RAM
     if (!data_opt.has_value() && mmio_bus!=nullptr) {
         data_opt = mmio_bus->mmio_read(addr, width);
@@ -48,7 +48,7 @@ void rv32i_cpu_system::load(const decode_t &decode, width_t width, bool sign_ext
 void rv32i_cpu_system::store(const decode_t &decode, width_t width) {
     word_t addr = gpr[decode.rs1] + decode.imm;
     word_t data = zero_truncate<uint32_t>(gpr[decode.rs2], width);
-    bool success = memory.write(addr, width, data);
+    bool success = data_bus->write(addr, width, data);
     // fall back to MMIO
     if (!success && mmio_bus!=nullptr) {
         success = mmio_bus->mmio_write(addr, width, data);

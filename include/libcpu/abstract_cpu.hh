@@ -25,15 +25,24 @@ class abstract_cpu {
     public:
         using word_t = WORD_T;              ///< Type alias for the CPU word type
 
+        abstract_memory<WORD_T> *instr_bus = nullptr; // Pointer to the simulated instruction bus. Ignored if the subclass do not use a simulated memory.
+        abstract_memory<WORD_T> *data_bus = nullptr; // Pointer to the simulated data bus. Ignored if the subclass do not use a simulated memory.
+        libvio::bus *mmio_bus = nullptr; ///< The virtual MMIO bus. If nullptr, MMIO is disabled. Ignored on user-space emulators.
+
         libvio::ringbuffer<event_t<WORD_T>> *event_buffer = nullptr;  ///< Buffer for storing CPU events. If nullptr, event tracing is off.
 
-        libvio::bus *mmio_bus = nullptr; ///< The virtual MMIO bus. If nullptr, MMIO is disabled. Ignored on user-space emulators.
 
         /**
          * @brief Get the number of the general purpose registers.
          * @return The number of the general purpose registers.
          */
         virtual size_t n_gpr(void) const = 0;
+
+        /**
+         * @brief Reset the CPU to prepare for execution.
+         * @param init_pc The initial value of the program counter.
+         */
+         virtual void reset(WORD_T init_pc) = 0;
 
         /**
          * @brief Get the program counter value of the the next instruction to be comitted.
@@ -102,13 +111,13 @@ class abstract_cpu {
          * @param addr Virtual address to read from
          * @param width Width of the read operation
          * @return The value read from memory, `nullopt` if out of bound.
-         * @note This function will not read from a MMIO address.
+         * @note This function will not read from a MMIO address. It tiggers no side-effect like caching neither.
          *      If a MMIO address is provided, `nullopt` is returned.
          */
-        virtual std::optional<WORD_T> vmem_read(WORD_T addr, libvio::width_t width) const {
+        virtual std::optional<WORD_T> vmem_peek(WORD_T addr, libvio::width_t width) const {
             auto paddr = vaddr_to_paddr(addr);
             if (paddr.has_value()) {
-                return pmem_read(paddr.value(), width);
+                return pmem_peek(paddr.value(), width);
             } else {
                 return {};
             }
@@ -119,10 +128,10 @@ class abstract_cpu {
          * @param addr Physical address to read from
          * @param width Width of the read operation
          * @return The value read from memory, `nullopt` if out of bound.
-         * @note This function will not read from a MMIO address.
+         * @note This function will not read from a MMIO address. It tiggers no side-effect like caching neither.
          *      If a MMIO address is provided, `nullopt` is returned.
          */
-        virtual std::optional<WORD_T> pmem_read(WORD_T addr, libvio::width_t width) const = 0;
+        virtual std::optional<WORD_T> pmem_peek(WORD_T addr, libvio::width_t width) const = 0;
 
         /**
          * @brief Whether the execution has ended.
