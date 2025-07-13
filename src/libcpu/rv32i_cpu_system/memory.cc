@@ -16,7 +16,7 @@ void rv32i_cpu_system::load(const decode_t &decode, width_t width, bool sign_ext
     auto data_opt = data_bus->read(addr, width);
     // fall back to MMIO if the address is out of RAM
     if (!data_opt.has_value() && mmio_bus!=nullptr) {
-        data_opt = mmio_bus->mmio_read(addr, width);
+        data_opt = mmio_bus->read(addr, width);
     }
     if (data_opt.has_value()) {
         // `data` is zero extended
@@ -51,7 +51,7 @@ void rv32i_cpu_system::store(const decode_t &decode, width_t width) {
     bool success = data_bus->write(addr, width, data);
     // fall back to MMIO
     if (!success && mmio_bus!=nullptr) {
-        success = mmio_bus->mmio_write(addr, width, data);
+        success = mmio_bus->write(addr, width, data);
     }
     if (success) {
         if (event_buffer!=nullptr) {
