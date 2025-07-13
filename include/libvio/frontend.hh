@@ -29,7 +29,7 @@ enum class ioreq_type_t {
 /**
  * @struct ioreq_t
  * @brief Encapsulates a resolved I/O request
- * @see namespace `libvio::req` for `req` values of each type of device
+ * @see namespace `libvio::reqval` for `req` values of each type of device
  */
 struct ioreq_t {
     ioreq_type_t type;  ///< Type of I/O operation requested
@@ -126,7 +126,7 @@ protected:
      * 
      * Called automatically by read() for ioctl_get requests
      */
-    virtual uint64_t ioctl_get(uint64_t req);
+    virtual uint64_t ioctl_get(uint64_t req) = 0;
 
     /**
      * @brief Handle control parameter set operation
@@ -135,7 +135,7 @@ protected:
      * 
      * Called automatically by write() for ioctl_set requests.
      */
-    virtual void ioctl_set(uint64_t req, uint64_t value);
+    virtual void ioctl_set(uint64_t req, uint64_t value) = 0;
 };
 
 }

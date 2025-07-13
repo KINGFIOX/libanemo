@@ -11,7 +11,7 @@ namespace libvio {
  * This class does the actual IO operations. It also acts as a producer of input data.
  * Each member function requires an argument `req`, whose meaning is defined by subclasses.
  * The behavior is undefined if `req` is invalid.
- * @see namespace `libvio::req` for `req` values of each subclass
+ * @see namespace `libvio::reqval` for `req` values of each subclass
  */
 class io_backend {
     public:
