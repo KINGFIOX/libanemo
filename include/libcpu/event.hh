@@ -20,6 +20,7 @@ namespace libcpu {
  * Each event type has specific meanings for its val1 and val2 fields
  */
 enum class event_type_t {
+    empty = 0,   ///< Empty event, used for internal purpose only
     issue,       ///< Instruction issued - val1: instr_part1, val2: instr_part2
     reg_write,   ///< Register written - val1: rd_addr, val2: rd_data
     load,        ///< Memory load - val1: addr, val2: zero extended data
@@ -75,6 +76,7 @@ struct event_t {
                val1 == other.val1 && 
                val2 == other.val2;
     }
+
     /**
      * @brief Inequality comparison operator for event_t
      * @param other The event to compare with
@@ -82,6 +84,31 @@ struct event_t {
      */
     bool operator!=(const event_t& other) const {
         return !(*this == other);
+    }
+
+    /**
+    * @brief Strict weak ordering comparison for `event_t` objects.
+    *
+    * This operator defines a lexicographical order for events based on their fields.
+    *
+    * @note This ordering is required for use with standard library containers
+    *       (e.g., `std::set`, `std::map`) and algorithms (e.g., `std::sort`).
+    */
+    bool operator < (const event_t<WORD_T>& other) const {
+        // Compare 'type'
+        if (static_cast<WORD_T>(type) != static_cast<WORD_T>(other.type)) {
+            return static_cast<WORD_T>(type) < static_cast<WORD_T>(other.type);
+        }
+        // Compare 'pc'
+        if (pc != other.pc) {
+            return pc < other.pc;
+        }
+        // Compare 'val1'
+        if (val1 != other.val1) {
+            return val1 < other.val1;
+        }
+        // Compare 'val2'
+        return val2 < other.val2;
     }
 
     /**
