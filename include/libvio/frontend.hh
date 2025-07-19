@@ -93,6 +93,8 @@ public:
      * at each cycle boundary.
      */
     virtual void next_cycle(void);
+    
+    virtual ~io_frontend() = default;
 
 protected:
     /**

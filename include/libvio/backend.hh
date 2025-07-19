@@ -60,6 +60,8 @@ class io_backend {
         * @param data Output data
         */
         virtual void put(uint64_t req, uint64_t data) = 0;
+
+        virtual ~io_backend() = default;
 };
 
 }
