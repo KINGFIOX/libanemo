@@ -36,7 +36,7 @@ class abstract_cpu {
          * @brief Get the number of the general purpose registers.
          * @return The number of the general purpose registers.
          */
-        virtual size_t n_gpr(void) const = 0;
+        virtual uint8_t n_gpr(void) const = 0;
 
         /**
          * @brief Get the name of a general purpose register by its address.

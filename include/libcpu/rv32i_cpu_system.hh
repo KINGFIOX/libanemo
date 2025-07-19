@@ -79,7 +79,7 @@ class rv32i_cpu_system: public abstract_cpu<uint32_t> {
 
         void reset(word_t init_pc) override;
         
-        size_t n_gpr(void) const override;
+        uint8_t n_gpr(void) const override;
         const char* gpr_name(uint8_t addr) const override;
         uint8_t gpr_addr(const char* name) const override;
 

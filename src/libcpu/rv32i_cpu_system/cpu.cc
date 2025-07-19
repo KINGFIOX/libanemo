@@ -21,7 +21,7 @@ void rv32i_cpu_system::reset(word_t init_pc) {
     decode_cache_addr_mask = 0xfff;
 };
 
-size_t rv32i_cpu_system::n_gpr(void) const {
+uint8_t rv32i_cpu_system::n_gpr(void) const {
     return 32;
 }
 
