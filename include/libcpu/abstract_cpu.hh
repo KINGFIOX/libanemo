@@ -39,6 +39,20 @@ class abstract_cpu {
         virtual size_t n_gpr(void) const = 0;
 
         /**
+         * @brief Get the name of a general purpose register by its address.
+         * @param addr The address of the register to query.
+         * @return The name of the register as a null-terminated string.
+         */
+        virtual const char *gpr_name(uint8_t addr) const = 0;
+
+        /**
+         * @brief Get the address of a general purpose register by its name.
+         * @param name The name of the register to query (case-sensitive).
+         * @return The address of the register.
+         */
+        virtual uint8_t gpr_addr(const char *name) const = 0;
+
+        /**
          * @brief Reset the CPU to prepare for execution.
          * @param init_pc The initial value of the program counter.
          */

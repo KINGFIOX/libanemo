@@ -2,6 +2,8 @@
 #define LIBCPU_RISCV_HH
 
 #include <cstdint>
+#include <cstdlib>
+#include <cstring>
 
 namespace libcpu::riscv {
 
@@ -50,11 +52,27 @@ enum gpr_addr_t: uint8_t {
     T6  = 31   ///< Temporary register (x31).
 };
 
+inline constexpr const char *gpr_names[] = {
+    "x0", "ra", "sp", "gp", "tp", "t0", "t1", "t2", "s0", "s1", 
+    "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7", "s2", "s3", 
+    "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
+};
+    
 inline const char* gpr_name(uint8_t addr) {
-    static const char* names[] = {"X0", "RA", "SP", "GP", "TP", "T0", "T1", "T2", "S0", "S1", 
-                                 "A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7", "S2", "S3", 
-                                 "S4", "S5", "S6", "S7", "S8", "S9", "S10", "S11", "T3", "T4", "T5", "T6"};
-    return names[addr];
+    return gpr_names[addr];
+}
+
+inline int8_t gpr_addr(const char* name) {
+    if (name[0] == 'x') {
+        auto num = strtoul(name+1, nullptr, 10);
+        return static_cast<uint8_t>(num);
+    }
+    for (uint8_t i=0; i<32; ++i) {
+        if (strcmp(name,gpr_names[i]) == 0) {
+            return i;
+        }
+    }
+    return 0;
 }
 
 }

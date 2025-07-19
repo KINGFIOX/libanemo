@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <cstdint>
+#include <libcpu/riscv.hh>
 #include <libcpu/rv32i.hh>
 #include <libcpu/rv32i_cpu_system.hh>
 #include <libvio/ringbuffer.hh>
@@ -22,6 +23,14 @@ void rv32i_cpu_system::reset(word_t init_pc) {
 
 size_t rv32i_cpu_system::n_gpr(void) const {
     return 32;
+}
+
+const char* rv32i_cpu_system::gpr_name(uint8_t addr) const {
+    return riscv::gpr_name(addr);
+}
+
+uint8_t rv32i_cpu_system::gpr_addr(const char* name) const {
+    return riscv::gpr_addr(name);
 }
 
 uint32_t rv32i_cpu_system::get_gpr(uint8_t gpr_addr) const {
