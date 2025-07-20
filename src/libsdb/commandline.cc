@@ -8,6 +8,11 @@
 #include <memory>
 #include <stdexcept>
 
+#ifdef _WIN32
+#define popen _popen
+#define pclose _pclose
+#endif
+
 namespace libsdb {
 
 std::optional<std::vector<std::string>> tokenize_command(std::string command) {

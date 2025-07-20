@@ -297,7 +297,7 @@ std::optional<WORD_T> evaluate_expression(const std::vector<token_t> &postfix_ex
  */
 template <typename WORD_T>
 std::optional<WORD_T> evaluate_expression(const std::string &expr, const libcpu::abstract_cpu<WORD_T> *cpu) {
-    return evaluate_expression(parse_expression(tokenize_expression(expr)).value_or({}), cpu);
+    return evaluate_expression(parse_expression(tokenize_expression(expr)).value_or(std::vector<token_t>{}), cpu);
 }
 
 }
