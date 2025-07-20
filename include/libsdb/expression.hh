@@ -285,6 +285,21 @@ std::optional<WORD_T> evaluate_expression(const std::vector<token_t> &postfix_ex
     }
 }
 
+/**
+ * @brief Evaluates an expression represented with a string
+ *
+ * `cpu` can be nullptr in case you are evaluating an expression not related to any simulated CPU.
+ *
+ * @tparam WORD_T The word type, must be unsigned integer. All numbers are converted to this type.
+ * @param expr The expression
+ * @param cpu Pointer to the CPU implementation. If nullptr, the expression cannot refer to CPU registers.
+ * @return Optional result of the evaluation if successful
+ */
+template <typename WORD_T>
+std::optional<WORD_T> evaluate_expression(const std::string &expr, const libcpu::abstract_cpu<WORD_T> *cpu) {
+    return evaluate_expression(parse_expression(tokenize_expression(expr)).value_or({}), cpu);
+}
+
 }
 
 #endif

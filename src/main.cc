@@ -1,9 +1,12 @@
+#include <cstdint>
 #include <iostream>
 #include <libcpu/abstract_cpu.hh>
 #include <libcpu/rv32i_cpu_system.hh>
+#include <libsdb/sdb.hh>
 #include <libvio/bus.hh>
 #include <libvio/console.hh>
 #include <libvio/mtime.hh>
+#include <string>
 
 int main(int argc, char** argv) {
     if (argc != 2) {
@@ -23,10 +26,16 @@ int main(int argc, char** argv) {
     cpu.mmio_bus = &bus;
     cpu.reset(0x80000000);
 
-    while (!cpu.stopped()) {
-        cpu.next_instruction();
-        bus.next_cycle();
+    libsdb::sdb<uint32_t> sdb {};
+    sdb.cpu = &cpu;
+
+    while (!sdb.stopped()) {
+        std::cout << "sdb> ";
+        std::string cmd;
+        std::getline(std::cin, cmd);
+        sdb.execute_command(cmd);
     }
 
+    sdb.execute_command("status");
     return cpu.get_gpr(10);
 }
