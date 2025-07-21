@@ -19,11 +19,11 @@ int main(int argc, char** argv) {
     memory.load_elf_from_file(argv[1]);
     cpu.instr_bus = &memory;
     cpu.data_bus = &memory;
-    libvio::bus bus{{
+    libvio::io_dispatcher bus{{
         {new libvio::console_frontend{}, new libvio::console_backend_iostream{std::cin, std::cout}, 0xa00003f8, 8},
         {new libvio::mtime_frontend{}, new libvio::mtime_backend_chrono{}, 0xa0000048, 16}
     }};
-    cpu.mmio_bus = &bus;
+    cpu.mmio_bus = bus.new_agent();
     cpu.reset(0x80000000);
 
     libsdb::sdb<uint32_t> sdb {};

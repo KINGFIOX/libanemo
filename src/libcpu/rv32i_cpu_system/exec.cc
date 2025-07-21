@@ -55,4 +55,8 @@ void rv32i_cpu_system::next_instruction(void) {
     // handle traps
     next_pc = handle_trap();
     pc = next_pc;
+
+    if (mmio_bus != nullptr) {
+        mmio_bus->next_cycle();
+    }
 }

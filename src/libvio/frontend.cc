@@ -9,21 +9,8 @@
 namespace libvio {
 
 std::optional<uint64_t> io_frontend::read(uint64_t offset, width_t width) {
-    // return cached result
-    // if this is not the first read in a cycle
-    if (read_offset.has_value()) {
-        if (read_offset.value() == offset) {
-            return read_data;
-        } else {
-            std::cerr << "libvio: reading from different MMIO addresses in a single cycle." << std::endl;
-            return {};
-        }
-    }
-
-    // request the backend on the first read in a cycle
-    // and cache the result
+    std::optional<uint64_t> read_data;
     auto req = resolve_read(offset, width);
-    read_offset = offset;
     switch (req.type) {
         case ioreq_type_t::read:
             read_data = backend->request(req.req);
@@ -52,24 +39,7 @@ std::optional<uint64_t> io_frontend::read(uint64_t offset, width_t width) {
 }
 
 bool io_frontend::write(uint64_t offset, width_t width, uint64_t data) {
-    // return cached result
-    // if this is not the first write in a cycle
-    if (write_offset.has_value()) {
-        if (write_offset.value() != offset) {
-            std::cerr << "libvio: writing to different MMIO addresses in a single cycle." << std::endl;
-            return false;
-        } else if (write_data != data) {
-            std::cerr << "libvio: writing different values to the same MMIO addresses in a single cycle." << std::endl;
-            return false;
-        } else {
-            return write_result;
-        }
-    }
-
-    // call the backend on the first write in a cycle
-    // and cache the result
     auto req = resolve_write(offset, width, data);
-    write_offset = offset;
     write_data = data;
     switch (req.type) {
         case ioreq_type_t::write:
@@ -90,11 +60,6 @@ bool io_frontend::write(uint64_t offset, width_t width, uint64_t data) {
             break;
     }
     return write_result;
-}
-
-void io_frontend::next_cycle(void) {
-    read_offset = {};
-    write_offset = {};
 }
 
 }

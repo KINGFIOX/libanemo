@@ -209,7 +209,7 @@ void sdb<WORD_T>::execute_command(std::string cmd){
     std::optional<command_t> cmd_opt = parse_command(tokens_opt.value());
     if (!cmd_opt.has_value()) {
         std::cerr << "libsdb: command syntax error." << std::endl;
-        std::cerr << "Must be one of: <command> [arg]...\n<command> [arg]... | <pipe_command>" << std::endl;
+        std::cerr << "Must be one of:\n<command> [arg]...\n<command> [arg]... | <pipe_command>" << std::endl;
         return;
     }
     execute_command(cmd_opt.value());
@@ -574,9 +574,6 @@ void sdb<WORD_T>::execute_steps(size_t n, std::ostream &os) {
             break;
         }
         cpu->next_instruction();
-        if (cpu->mmio_bus != nullptr) {
-            cpu->mmio_bus->next_cycle();
-        }
         if (check_breakpoints(os) || check_watchpoints(os) || check_trap(os)) {
             break;
         }

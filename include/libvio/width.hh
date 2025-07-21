@@ -7,6 +7,7 @@
 #define LIBVIO_WIDTH_HH
 
 #include <cstdint>
+#include <string>
 
 namespace libvio {
 
@@ -98,6 +99,25 @@ constexpr uint64_t sign_extend<uint64_t>(uint64_t value, width_t width) {
             return uint64_t(int64_t(int32_t(value)));
         default:
             return value;
+    }
+}
+
+}
+
+namespace std {
+
+/**
+ * @brief Converts a width_t enum value to its string representation
+ * @param width The width enum value to convert
+ * @return String representation of the width
+ */
+inline string to_string(libvio::width_t width) noexcept {
+    switch (width) {
+        case libvio::width_t::byte:  return "byte";
+        case libvio::width_t::half:  return "half";
+        case libvio::width_t::word:  return "word";
+        case libvio::width_t::dword: return "dword";
+        default:             return "unknown";
     }
 }
 

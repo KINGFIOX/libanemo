@@ -168,7 +168,7 @@ class simple_difftest: public abstract_difftest<WORD_T> {
             }
 
             if (difftest_error) {
-                std::cerr << "libvio: difftest error" << std::endl;
+                std::cerr << "libcpu: difftest error" << std::endl;
                 std::cerr << "dut:" << std::endl;
                 for (auto e: dut_events) {
                     std::cout << e.to_string() << std::endl;

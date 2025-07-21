@@ -85,38 +85,10 @@ public:
      * @return true if write succeeded, false otherwise
      */
     virtual bool write(uint64_t offset, width_t width, uint64_t data);
-
-    /**
-     * @brief Advance to next simulation cycle
-     * 
-     * Clears cached requests and results. Must be called
-     * at each cycle boundary.
-     */
-    virtual void next_cycle(void);
     
     virtual ~io_frontend() = default;
 
 protected:
-    /**
-     * @brief Cached read address for current cycle
-     * 
-     * Subsequent reads to same address use cached data
-     */
-    std::optional<uint64_t> read_offset = {};
-
-    /**
-     * @brief Cached read data for current cycle
-     * 
-     * Valid when read_offset has value
-     */
-    std::optional<uint64_t> read_data;
-
-    /**
-     * @brief Cached write address for current cycle
-     * 
-     * Subsequent writes to same address are ignored
-     */
-    std::optional<uint64_t> write_offset = {};
 
     uint64_t write_data;  ///< Cached write data for current cycle
     bool write_result;    ///< Cached write status for current cycle

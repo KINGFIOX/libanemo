@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <libcpu/event.hh>
 #include <libcpu/memory.hh>
+#include <libvio/agent.hh>
 #include <libvio/bus.hh>
 #include <libvio/frontend.hh>
 #include <libvio/ringbuffer.hh>
@@ -27,7 +28,7 @@ class abstract_cpu {
 
         abstract_memory<WORD_T> *instr_bus = nullptr; // Pointer to the simulated instruction bus. Ignored if the subclass do not use a simulated memory.
         abstract_memory<WORD_T> *data_bus = nullptr; // Pointer to the simulated data bus. Ignored if the subclass do not use a simulated memory.
-        libvio::bus *mmio_bus = nullptr; ///< The virtual MMIO bus. If nullptr, MMIO is disabled. Ignored on user-space emulators.
+        libvio::io_agent *mmio_bus = nullptr; ///< The virtual MMIO bus. If nullptr, MMIO is disabled. Ignored on user-space emulators.
 
         libvio::ringbuffer<event_t<WORD_T>> *event_buffer = nullptr;  ///< Buffer for storing CPU events. If nullptr, event tracing is off.
 
