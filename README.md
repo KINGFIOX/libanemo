@@ -36,7 +36,7 @@ To use `libvio` for simulated MMIO, simply initialize a `libvio::io_dispatcher` 
 ```c++
 #include <libvio/bus.hh>
 
-libvio::io_dispatcher bus{{
+libvio::io_dispatcher dispatcher{{
     {new libvio::console_frontend{}, new libvio::console_backend_iostream{std::cin, std::cout}, 0xa00003f8, 8},
     {new libvio::mtime_frontend{}, new libvio::mtime_backend_chrono{}, 0xa0000048, 16}
 }};
@@ -69,7 +69,7 @@ cpu.data_bus = &memory;
 Optionally connect an MMIO agent to the processor. MMIO requests are ignored if no MMIO agent is attached.
 
 ```c++
-cpu.mmio_bus = bus.new_agent();
+cpu.mmio_bus = dispatcher.new_agent();
 ```
 
 You can connect the `instr_bus` and `data_bus` to the same memory, or different caches with the same underlaying memory, or even different memories if the processor uses different address space to access instruction and data.
@@ -129,7 +129,37 @@ Instead of comparing the state of CPUs, this library uses a different approach f
 - Comparing the entire state of the processor can be expensive in terms of performance.
 - In this way, comparing can be done semi-offline, or even in another thread.
 
-`libanemo` is designed with supporting this way of differential testing in mind. `libvio` is designed 
+`libanemo` is designed with supporting this way of differential testing in mind. `libvio` is designed in the way that if there are multiple MMIO agents attached to the same MMIO bus, the bus will compare the MMIO requests they make. If the sequences of their MMIO requests are the same, the data they read from the virtual devices are guaranteed to be the same. If the sequences of thier MMIO requests are different, there will be an error. `libcpu` provides a unified interface for simulators, making differential testing easier.
+
+`libcpu` provides a class `libcpu::abstract_difftest<WORD_T>`, for an interface of differential testing. It is a subclass of `abstract_cpu<WORD_T>`, providing the exact same interface with CPU simulators, and being compatible with `libsdb::sdb<WORD_T>`. The only difference is that instead of simulating a CPU, it controls the DUT and reference, comparing their behaviors. `libcpu::simple_difftest<WORD_T>` implements a simple differential testing logic where the writes to registers are compared between any DUT and a single-cycle reference. This logic is applicable to most types of DUTs.
+
+```c++
+#include <libcpu/difftest.hh>
+#include <libsdb/sdb.hh>
+
+rv32i_cpu_npc dut{}; // A subclass of `abstract_cpu<uint32_t>` holding your own implementation
+libcpu::rv32i_cpu_system ref{}; // A single-cycle reference
+
+// Initialize the DUT and REF
+
+libcpu::simple_difftest<uint32_t> difftest{};
+difftest.dut = &dut;
+difftest.ref = &ref;
+
+// Do not call `reset` in the initialization of DUT and REF
+// `difftest.reset()` will reset them all
+difftest.reset(init_pc);
+
+libsdb::sdb<uint32_t> sdb {};
+sdb.cpu = &difftest;
+
+while (!sdb.stopped()) {
+    std::cout << "sdb> ";
+    std::string cmd;
+    std::getline(std::cin, cmd);
+    sdb.execute_command(cmd);
+}
+```
 
 ## TODO List
 
