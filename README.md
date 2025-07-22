@@ -6,6 +6,8 @@
 >
 > Take my blessings and live leisurely from this day onward.
 
+中文版见[README_zh.md](README_zh.md)。
+
 ## Overview
 
 `libanemo` is a library made to provide a unified, portable and graceful collection of tools for designing processors. It is designed with extendable API and differential testing support in mind. This library consists of these parts:
@@ -85,7 +87,12 @@ while (!cpu.stopped()) {
 
 `libcpu` provides `event_t<WORD_T>` in `libcpu/event.hh` describing an architectural event, for example, writing to a register and a memory operation. To enable event tracing, attach a `libvio::ringbuffer<event_t<WORT_T>>` to the CPU core. The events will be automatically put into the ring-buffer if supported.
 
-## Accessing a Simple Debugging Command-line
+```c++
+libvio::ringbuffer<libcpu::event_t<uint32_t>> events{4096};
+cpu.event_buffer = &events;
+```
+
+### Accessing a Simple Debugging Command-line
 
 `libsdb` provides a template class `sdb<WORD_T>` that provides a simple command-line interface for debugging.
 
@@ -129,7 +136,7 @@ Instead of comparing the state of CPUs, this library uses a different approach f
 - Comparing the entire state of the processor can be expensive in terms of performance.
 - In this way, comparing can be done semi-offline, or even in another thread.
 
-`libanemo` is designed with supporting this way of differential testing in mind. `libvio` is designed in the way that if there are multiple MMIO agents attached to the same MMIO bus, the bus will compare the MMIO requests they make. If the sequences of their MMIO requests are the same, the data they read from the virtual devices are guaranteed to be the same. If the sequences of thier MMIO requests are different, there will be an error. `libcpu` provides a unified interface for simulators, making differential testing easier.
+`libanemo` is designed with supporting this way of differential testing in mind. `libvio` is designed in the way that if there are multiple MMIO agents attached to the same MMIO dispatcher, the dispatcher will compare the MMIO requests they make. If the sequences of their MMIO requests are the same, the data they read from the virtual devices are guaranteed to be the same. If the sequences of thier MMIO requests are different, there will be an error. `libcpu` provides a unified interface for simulators, making differential testing easier.
 
 `libcpu` provides a class `libcpu::abstract_difftest<WORD_T>`, for an interface of differential testing. It is a subclass of `abstract_cpu<WORD_T>`, providing the exact same interface with CPU simulators, and being compatible with `libsdb::sdb<WORD_T>`. The only difference is that instead of simulating a CPU, it controls the DUT and reference, comparing their behaviors. `libcpu::simple_difftest<WORD_T>` implements a simple differential testing logic where the writes to registers are compared between any DUT and a single-cycle reference. This logic is applicable to most types of DUTs.
 
