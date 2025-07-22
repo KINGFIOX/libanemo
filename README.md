@@ -22,30 +22,41 @@ The quickest way to use this library is including it as a CMake subdirectory in 
 
 ### Using Virtual MMIO
 
-`libvio` consists of 3 major parts:
+`libvio` consists of 4 major parts:
 
 - IO frontends: resolve the MMIO requests.
 - IO backends: do the actual input and output.
-- MMIO bus: dispatch MMIO request to a set of managed frontends.
+- MMIO dispatcher: dispatch MMIO request to a set of managed frontends.
+- MMIO agents: provides an interface for simulated processors
 
 Different IO backends can be implemented for the same type of virtual device. For example, a simple iostream based console IO backend is implemented in this library. And you can also implement another console IO backend that connects the virtual console of the simulated processor to a physical serial port of your computer. Both backends work with the same frontend.
 
-To use `libvio` for simulated MMIO, simply initialize a `libvio::bus` with specified IO frontend, IO backend, starting address and address range size of each virtual device.
+To use `libvio` for simulated MMIO, simply initialize a `libvio::io_dispatcher` with specified IO frontend, IO backend, starting address and address range size of each virtual device.
 
 ```c++
-libvio::bus bus{{
+#include <libvio/bus.hh>
+
+libvio::io_dispatcher bus{{
     {new libvio::console_frontend{}, new libvio::console_backend_iostream{std::cin, std::cout}, 0xa00003f8, 8},
     {new libvio::mtime_frontend{}, new libvio::mtime_backend_chrono{}, 0xa0000048, 16}
 }};
 ```
 
-Then you can use `bus.read()` and `bus.write()` to simulate MMIO operations. You need to call `bus.next_cycle()` after each cycle of the simulated system.
+Then create an MMIO agent of this dispatcher with `io_dispatcher.new_agent()`.
+
+```c++
+auto agent = dispatcher.new_agent();
+```
+
+Then you can use `agent.read()` and `agent.write()` to simulate MMIO operations. You need to call `agent.next_cycle()` after each cycle of the simulated system. If you attach this agent to a simulated CPU, as shown below, the simulated CPU should call `agent.next_cycle()` automatically after completing each cycle.
 
 ### Simulating a CPU
 
 `libcpu` provides the `abstract_cpu` base class for a simulated processor core, and the `abstract_memory` base class for simulated memory. To simulate a processor, instantiate a processor core, a memory, initialize the memory with proper content, and connect the memory to the memory ports of the CPU core.
 
 ```c++
+#include <libcpu/rv32i_cpu_system.hh>
+
 libcpu::rv32i_cpu_system cpu;
 
 libcpu::contiguous_memory<uint32_t> memory{0x80000000, 128*1024*1024};
@@ -55,21 +66,20 @@ cpu.instr_bus = &memory;
 cpu.data_bus = &memory;
 ```
 
-Optionally connect an MMIO bus to the processor. MMIO requests are ignored if no MMIO bus is connected.
+Optionally connect an MMIO agent to the processor. MMIO requests are ignored if no MMIO agent is attached.
 
 ```c++
-cpu.mmio_bus = &bus;
+cpu.mmio_bus = bus.new_agent();
 ```
 
 You can connect the `instr_bus` and `data_bus` to the same memory, or different caches with the same underlaying memory, or even different memories if the processor uses different address space to access instruction and data.
 
-Then reset the CPU with specified initial program counter with `reset()`. Then you can step the CPU forward with `next_instruction()` or `next_cycle()`, and check whether it has stopped with `stopped`.
+Then reset the CPU with specified initial program counter with `reset()`. Then you can step the CPU forward with `next_instruction()` or `next_cycle()`, and check whether it has stopped with `stopped()`.
 
 ```c++
 cpu.reset(0x80000000);
 while (!cpu.stopped()) {
     cpu.next_cycle();
-    bus.next_cycle();
 }
 ```
 
