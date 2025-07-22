@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <ios>
 #include <iostream>
+#include <libcpu/event.hh>
 #include <ostream>
 #include <vector>
 #include <string>
@@ -54,6 +55,7 @@ public:
     static void cmd_watch(std::vector<std::string> args, sdb<WORD_T>* sdb_inst, std::ostream& os);
     static void cmd_break(std::vector<std::string> args, sdb<WORD_T>* sdb_inst, std::ostream& os);
     static void cmd_eval(std::vector<std::string> args, sdb<WORD_T>* sdb_inst, std::ostream& os);
+    static void cmd_trace(std::vector<std::string> args, sdb<WORD_T>* sdb_inst, std::ostream& os);
 
     /**
      * @var commands
@@ -96,6 +98,9 @@ public:
             "  on|off - Enable or disable trap breakpoints"},
         {cmd_eval, (const char* const[]){"evaluate", "eval", "e", "expr", nullptr},
             "eval: Evaluate an expression\nUsage:\nevaluate <expression>"
+        },
+        {cmd_trace, (const char* const[]){"trace", "t", "log", "events", nullptr},
+            "trace: show event logs\nUsage:\ntrace [instr] [mem] [func] [trap]"
         }
     };
 
@@ -535,6 +540,63 @@ void sdb<WORD_T>::cmd_eval(std::vector<std::string> args, sdb<WORD_T> *sdb_inst,
     os << "Hexadecimal: " 
        << std::setw(hex_width) << std::setfill('0') 
        << std::hex << val << std::endl;
+}
+
+template <typename WORD_T>
+void sdb<WORD_T>::cmd_trace(std::vector<std::string> args, sdb<WORD_T> *sdb_inst, std::ostream &os) {
+    bool instr, mem, func, trap;
+    if (args.size() == 0) {
+        instr = mem = func = trap = true;
+    } else {
+        for (auto s: args) {
+            if (s == "instr") {
+                instr = true;
+            } else if (s == "mem") {
+                mem = true;
+            } else if (s == "func") {
+                func = true;
+            } else if (s == "trap") {
+                trap = true;
+            } else {
+                show_command_help("trace", os);
+                return;
+            }
+        }
+    }
+    if (sdb_inst->cpu->event_buffer == nullptr) {
+        os << "Event buffer is null, tracing disabled." << std::endl;
+        return;
+    }
+    for (libcpu::event_t<WORD_T> e: *(sdb_inst->cpu->event_buffer)) {
+        switch (e.type) {
+            case libcpu::event_type_t::issue:
+            case libcpu::event_type_t::reg_write:
+                if (instr) {
+                    os << e.to_string() << std::endl;
+                }
+                break;
+            case libcpu::event_type_t::load:
+            case libcpu::event_type_t::store:
+                if (mem) {
+                    os << e.to_string() << std::endl;
+                }
+                break;
+            case libcpu::event_type_t::call:
+            case libcpu::event_type_t::call_ret:
+                if (func) {
+                    os << e.to_string() << std::endl;
+                }
+                break;
+            case libcpu::event_type_t::trap:
+            case libcpu::event_type_t::trap_ret:
+                if (trap) {
+                    os << e.to_string() << std::endl;
+                }
+                break;
+            default:
+                break;
+        }
+    }
 }
 
 template <typename WORD_T>
