@@ -140,14 +140,15 @@ class simple_difftest: public abstract_difftest<WORD_T> {
                 return;
             }
 
-            // This implementation only compares resister writes
+            // This implementation only compares resister writes and traps
             // Because register being written means some instruction has been commited.
             // And all instructions are commited in order.
+            // And traps cannot happen out of ordder.
             // This is the only assumption that can be made across all types of CPUs.
             auto pull_events = [this](std::vector<event_t<WORD_T>> &dest, event_buffer_t *buffer, size_t begin, bool append=false) {
                 for (size_t i=begin; i<buffer->lastindex(); ++i) {
                     event_t<WORD_T> event = (*buffer)[i];
-                    if (event.type==event_type_t::reg_write) {
+                    if (event.type==event_type_t::reg_write || event.type==event_type_t::trap || event.type==event_type_t::trap_ret) {
                         dest.push_back(event);
                     }
                     if (append && this->event_buffer!=nullptr) {
