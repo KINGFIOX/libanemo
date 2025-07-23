@@ -9,15 +9,19 @@ namespace libcpu {
 
 template <typename WORD_T>
 void riscv_cpu<WORD_T>::reset(WORD_T init_pc) {
-    priv_level = riscv::priv_level_t::u;
     for (size_t i=0; i<32; ++i) {
         gpr[i] = 0;
     }
-    const std::vector<csr_def_t> &csr_info = csr_list();
+    const std::vector<csr_def_t> &csr_info = get_csr_list();
     for (size_t i=0; i<csr_info.size(); ++i) {
-        csr[i] = csr_info[i].init_value;
+        csr.push_back(csr_info[i].init_value);
     }
     pc = init_pc;
+    is_stopped = false;
+    priv_level = riscv::priv_level_t::m;
+    except_mcause = {};
+    except_mtval = {};
+    next_trap = {};
     decode_cache.resize(4096);
     decode_cache_addr_mask = 0xfff;
 };
@@ -50,6 +54,11 @@ WORD_T riscv_cpu<WORD_T>::get_pc(void) const {
 template <typename WORD_T>
 const WORD_T* riscv_cpu<WORD_T>::get_gpr(void) const {
     return gpr.data();
+};
+
+template <typename WORD_T>
+riscv::priv_level_t riscv_cpu<WORD_T>::get_priv_level(void) const {
+    return priv_level;
 };
 
 template <typename WORD_T>

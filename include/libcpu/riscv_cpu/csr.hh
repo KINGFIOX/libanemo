@@ -7,8 +7,8 @@
 namespace libcpu {
 
 template <typename WORD_T>
-const std::vector<typename riscv_cpu<WORD_T>::csr_def_t> &riscv_cpu<WORD_T>::csr_list(void) const {
-    return supported_csrs;
+const std::vector<typename riscv_cpu<WORD_T>::csr_def_t> &riscv_cpu<WORD_T>::get_csr_list(void) const {
+    return riscv_cpu<WORD_T>::csr_list;
 }
 
 // CSR access with no permission checking
@@ -16,7 +16,7 @@ const std::vector<typename riscv_cpu<WORD_T>::csr_def_t> &riscv_cpu<WORD_T>::csr
 
 template <typename WORD_T>
 WORD_T riscv_cpu<WORD_T>::csr_read(uint16_t addr) const {
-    const std::vector<csr_def_t> &csr_info = csr_list();
+    const std::vector<csr_def_t> &csr_info = get_csr_list();
     for (size_t i=0; i<csr_info.size(); ++i) {
         if (csr_info[i].addr == addr) {
             return csr[i];
@@ -27,7 +27,7 @@ WORD_T riscv_cpu<WORD_T>::csr_read(uint16_t addr) const {
 
 template <typename WORD_T>
 WORD_T riscv_cpu<WORD_T>::csr_read_bits(uint16_t addr, WORD_T bit_mask) const {
-    const std::vector<csr_def_t> &csr_info = csr_list();
+    const std::vector<csr_def_t> &csr_info = get_csr_list();
     for (size_t i=0; i<csr_info.size(); ++i) {
         if (csr_info[i].addr == addr) {
             return csr[i] & bit_mask;
@@ -38,7 +38,7 @@ WORD_T riscv_cpu<WORD_T>::csr_read_bits(uint16_t addr, WORD_T bit_mask) const {
 
 template <typename WORD_T>
 void riscv_cpu<WORD_T>::csr_write(uint16_t addr, WORD_T value) {
-    const std::vector<csr_def_t> &csr_info = csr_list();
+    const std::vector<csr_def_t> &csr_info = get_csr_list();
     for (size_t i=0; i<csr_info.size(); ++i) {
         if (csr_info[i].addr == addr) {
             csr[i] = value;
@@ -49,7 +49,7 @@ void riscv_cpu<WORD_T>::csr_write(uint16_t addr, WORD_T value) {
 
 template <typename WORD_T>
 void riscv_cpu<WORD_T>::csr_write_bits(uint16_t addr, WORD_T value, WORD_T bit_mask) {
-    const std::vector<csr_def_t> &csr_info = csr_list();
+    const std::vector<csr_def_t> &csr_info = get_csr_list();
     for (size_t i=0; i<csr_info.size(); ++i) {
         if (csr_info[i].addr == addr) {
             WORD_T oldval = csr[i];
@@ -61,7 +61,7 @@ void riscv_cpu<WORD_T>::csr_write_bits(uint16_t addr, WORD_T value, WORD_T bit_m
 
 template <typename WORD_T>
 void riscv_cpu<WORD_T>::csr_set_bits(uint16_t addr, WORD_T bits) {
-    const std::vector<csr_def_t> &csr_info = csr_list();
+    const std::vector<csr_def_t> &csr_info = get_csr_list();
     for (size_t i=0; i<csr_info.size(); ++i) {
         if (csr_info[i].addr == addr) {
             WORD_T oldval = csr[i];
@@ -74,7 +74,7 @@ void riscv_cpu<WORD_T>::csr_set_bits(uint16_t addr, WORD_T bits) {
 
 template <typename WORD_T>
 void riscv_cpu<WORD_T>::csr_clear_bits(uint16_t addr, WORD_T bits) {
-    const std::vector<csr_def_t> &csr_info = csr_list();
+    const std::vector<csr_def_t> &csr_info = get_csr_list();
     for (size_t i=0; i<csr_info.size(); ++i) {
         if (csr_info[i].addr == addr) {
             WORD_T oldval = csr[i];
@@ -101,7 +101,7 @@ bool riscv_cpu<WORD_T>::csr_check_write_access(uint16_t addr) const {
 
 template <typename WORD_T>
 void riscv_cpu<WORD_T>::csrrw(riscv_cpu<WORD_T>* cpu, const decode_t& decode) {
-    const std::vector<csr_def_t> &csr_info = cpu->csr_list();
+    const std::vector<csr_def_t> &csr_info = cpu->get_csr_list();
     uint16_t csr_addr = static_cast<uint16_t>(decode.imm&0xfff);
     if (!cpu->csr_check_write_access(csr_addr)) {
         CSR_ACCESS_FAULT;
@@ -127,7 +127,7 @@ void riscv_cpu<WORD_T>::csrrw(riscv_cpu<WORD_T>* cpu, const decode_t& decode) {
 
 template <typename WORD_T>
 void riscv_cpu<WORD_T>::csrrs(riscv_cpu<WORD_T>* cpu, const decode_t& decode) {
-    const std::vector<csr_def_t> &csr_info = cpu->csr_list();
+    const std::vector<csr_def_t> &csr_info = cpu->get_csr_list();
     uint16_t csr_addr = static_cast<uint16_t>(decode.imm&0xfff);
     if (!cpu->csr_check_read_access(csr_addr)) {
         CSR_ACCESS_FAULT;
@@ -157,7 +157,7 @@ void riscv_cpu<WORD_T>::csrrs(riscv_cpu<WORD_T>* cpu, const decode_t& decode) {
 
 template <typename WORD_T>
 void riscv_cpu<WORD_T>::csrrc(riscv_cpu<WORD_T>* cpu, const decode_t& decode) {
-    const std::vector<csr_def_t> &csr_info = cpu->csr_list();
+    const std::vector<csr_def_t> &csr_info = cpu->get_csr_list();
     uint16_t csr_addr = static_cast<uint16_t>(decode.imm&0xfff);
     if (!cpu->csr_check_read_access(csr_addr)) {
         CSR_ACCESS_FAULT;
@@ -189,7 +189,7 @@ void riscv_cpu<WORD_T>::csrrc(riscv_cpu<WORD_T>* cpu, const decode_t& decode) {
 
 template <typename WORD_T>
 void riscv_cpu<WORD_T>::csrrwi(riscv_cpu<WORD_T>* cpu, const decode_t& decode) {
-    const std::vector<csr_def_t> &csr_info = cpu->csr_list();
+    const std::vector<csr_def_t> &csr_info = cpu->get_csr_list();
     uint16_t csr_addr = static_cast<uint16_t>(decode.imm&0xfff);
     if (!cpu->csr_check_write_access(csr_addr)) {
         CSR_ACCESS_FAULT;
@@ -215,7 +215,7 @@ void riscv_cpu<WORD_T>::csrrwi(riscv_cpu<WORD_T>* cpu, const decode_t& decode) {
 
 template <typename WORD_T>
 void riscv_cpu<WORD_T>::csrrsi(riscv_cpu<WORD_T>* cpu, const decode_t& decode) {
-    const std::vector<csr_def_t> &csr_info = cpu->csr_list();
+    const std::vector<csr_def_t> &csr_info = cpu->get_csr_list();
     uint16_t csr_addr = static_cast<uint16_t>(decode.imm&0xfff);
     if (!cpu->csr_check_read_access(csr_addr)) {
         CSR_ACCESS_FAULT;
@@ -245,7 +245,7 @@ void riscv_cpu<WORD_T>::csrrsi(riscv_cpu<WORD_T>* cpu, const decode_t& decode) {
 
 template <typename WORD_T>
 void riscv_cpu<WORD_T>::csrrci(riscv_cpu<WORD_T>* cpu, const decode_t& decode) {
-    const std::vector<csr_def_t> &csr_info = cpu->csr_list();
+    const std::vector<csr_def_t> &csr_info = cpu->get_csr_list();
     uint16_t csr_addr = static_cast<uint16_t>(decode.imm&0xfff);
     if (!cpu->csr_check_read_access(csr_addr)) {
         CSR_ACCESS_FAULT;

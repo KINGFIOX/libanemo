@@ -31,7 +31,7 @@ class riscv_cpu: public abstract_cpu<WORD_T> {
             WORD_T wpri_mask;
         };
 
-        static constexpr std::vector<csr_def_t> supported_csrs = {};
+        static constexpr std::vector<csr_def_t> csr_list = {};
 
     protected:
         // architectural state
@@ -50,7 +50,9 @@ class riscv_cpu: public abstract_cpu<WORD_T> {
         std::optional<WORD_T> except_mcause = {};
         std::optional<WORD_T> except_mtval = {};
         // for `get_trap`
-        std::optional<WORD_T> next_trap = {};  
+        std::optional<WORD_T> next_trap = {};
+
+        virtual decode_t decode_instruction(uint32_t instruction) const;
 
         // helper functions for memory operations
         void load(const decode_t &decode, libvio::width_t width, bool sign_extend);
@@ -88,10 +90,8 @@ class riscv_cpu: public abstract_cpu<WORD_T> {
         std::optional<WORD_T>pmem_peek(WORD_T addr, libvio::width_t width) const override;
         std::optional<WORD_T> get_trap(void) const override;
 
-        static decode_t decode_instruction(uint32_t instruction);
-
         riscv::priv_level_t get_priv_level(void) const;
-        virtual const std::vector<csr_def_t> &csr_list(void) const;
+        virtual const std::vector<csr_def_t> &get_csr_list(void) const;
         virtual WORD_T csr_read(uint16_t addr) const;
         virtual WORD_T csr_read_bits(uint16_t addr, WORD_T bit_mask) const;
 

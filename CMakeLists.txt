@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(SYSTEM "include")
 
 file(GLOB_RECURSE "LIBVIO_SRCS" "src/libvio/*.cc")
-file(GLOB_RECURSE "LIBCPU_SRCS" "src/libcpu/rv32i_cpu_system/*.cc")
+file(GLOB_RECURSE "LIBCPU_SRCS" "src/libcpu/*.cc")
 file(GLOB_RECURSE "LIBSDB_SRCS" "src/libsdb/*.cc")
 
 add_library(anemo STATIC "${LIBCPU_SRCS}" "${LIBVIO_SRCS}" "${LIBSDB_SRCS}")

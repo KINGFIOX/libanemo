@@ -14,6 +14,26 @@
         return decode; \
     }
 
+#define RISCV32_INSTR_PAT(pattern, mask, type, operation) \
+    if (((instruction^pattern)&mask) == 0) { \
+        decode.op = operation; \
+        decode.imm = imm_##type<uint32_t>(instruction); \
+        decode.rs1 = rs1_##type(instruction);\
+        decode.rs2 = rs2_##type(instruction);\
+        decode.rd  = rd_##type(instruction);\
+        return decode; \
+    }
+
+#define RISCV64_INSTR_PAT(pattern, mask, type, operation) \
+    if (((instruction^pattern)&mask) == 0) { \
+        decode.op = operation; \
+        decode.imm = imm_##type<uint64_t>(instruction); \
+        decode.rs1 = rs1_##type(instruction);\
+        decode.rs2 = rs2_##type(instruction);\
+        decode.rd  = rd_##type(instruction);\
+        return decode; \
+    }
+
 namespace libcpu {
 
 // R-type
@@ -59,9 +79,8 @@ inline uint_fast8_t rs2_j(uint32_t)       { return 0; }
 inline uint_fast8_t rd_j(uint32_t instr)  { return (instr >> 7)  & 0x1F; }
 
 template <typename WORD_T>
-riscv_cpu<WORD_T>::decode_t riscv_cpu<WORD_T>::decode_instruction(uint32_t instruction) {
-    decode_t decode{.imm=0, .rd=0};
-    decode.instr = instruction;
+riscv_cpu<WORD_T>::decode_t riscv_cpu<WORD_T>::decode_instruction(uint32_t instruction) const {
+    decode_t decode{nullptr, instruction, 0, 0, 0, 0};
 
     // U-type instructions
     RISCV_INSTR_PAT(0b00000000000000000000000000110111, 0b00000000000000000000000001111111, u, lui);
@@ -130,6 +149,14 @@ riscv_cpu<WORD_T>::decode_t riscv_cpu<WORD_T>::decode_instruction(uint32_t instr
     RISCV_INSTR_PAT(0b00000000000000000000000001110011, 0b11111111111111111111111111111111, r, ecall);
     RISCV_INSTR_PAT(0b00000000000100000000000001110011, 0b11111111111111111111111111111111, r, ebreak);
 
+    // CSR operations
+    RISCV_INSTR_PAT(0b00000000000000000001000001110011, 0b00000000000000000111000001111111, i, csrrw);
+    RISCV_INSTR_PAT(0b00000000000000000010000001110011, 0b00000000000000000111000001111111, i, csrrs);
+    RISCV_INSTR_PAT(0b00000000000000000011000001110011, 0b00000000000000000111000001111111, i, csrrc);
+    RISCV_INSTR_PAT(0b00000000000000000101000001110011, 0b00000000000000000111000001111111, i, csrrwi);
+    RISCV_INSTR_PAT(0b00000000000000000110000001110011, 0b00000000000000000111000001111111, i, csrrsi);
+    RISCV_INSTR_PAT(0b00000000000000000111000001110011, 0b00000000000000000111000001111111, i, csrrci);
+
     if constexpr (sizeof(WORD_T)*CHAR_BIT >= 64) {
     RISCV_INSTR_PAT(0b00000000000000000110000000000011, 0b00000000000000000111000001111111, i, lwu);
     RISCV_INSTR_PAT(0b00000000000000000011000000000011, 0b00000000000000000111000001111111, i, ld);
@@ -146,7 +173,6 @@ riscv_cpu<WORD_T>::decode_t riscv_cpu<WORD_T>::decode_instruction(uint32_t instr
     }
 
     // Default case for invalid instructions
-    decode.op = nullptr;
     return decode;
 }
 
