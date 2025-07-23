@@ -1,6 +1,7 @@
 #ifndef LIBCPU_RISCV_HH
 #define LIBCPU_RISCV_HH
 
+#include <climits>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -52,17 +53,35 @@ enum gpr_addr_t: uint8_t {
     T6  = 31   ///< Temporary register (x31).
 };
 
+/**
+ * @brief Array of general purpose register names
+ * 
+ * Contains the ABI names for all 32 RISC-V general purpose registers.
+ * Index corresponds to register number (x0-x31).
+ */
 inline constexpr const char *gpr_names[] = {
-    "x0", "ra", "sp", "gp", "tp", "t0", "t1", "t2", "s0", "s1", 
+    "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2", "s0", "s1", 
     "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7", "s2", "s3", 
     "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
 };
-    
-inline const char* gpr_name(uint8_t addr) {
+
+/**
+ * @brief Get the name of a general purpose register
+ * @param addr Register number (0-31)
+ * @return Register name string
+ */
+inline constexpr const char* gpr_name(uint8_t addr) {
     return gpr_names[addr];
 }
 
-inline int8_t gpr_addr(const char* name) {
+/**
+ * @brief Get the address/number of a general purpose register by name
+ * @param name Register name (either ABI name like "ra" or numeric like "x1")
+ * @return Register number (0-31)
+ * 
+ * @note Returns 0 if name is not found (matches x0 behavior)
+ */
+inline constexpr uint_fast8_t gpr_addr(const char* name) {
     if (name[0] == 'x') {
         auto num = strtoul(name+1, nullptr, 10);
         return static_cast<uint8_t>(num);
@@ -74,6 +93,171 @@ inline int8_t gpr_addr(const char* name) {
     }
     return 0;
 }
+
+/**
+ * @brief Control and Status Register (CSR) addresses
+ * 
+ * Contains all standard RISC-V CSR addresses as static constants
+ */
+struct csr_addr {
+    // Supervisor-Level CSRs
+    static constexpr uint16_t sstatus  = 0x100;  ///< Supervisor status register
+    static constexpr uint16_t sie      = 0x104;  ///< Supervisor interrupt enable register
+    static constexpr uint16_t stvec    = 0x105;  ///< Supervisor trap handler base address
+    static constexpr uint16_t scounteren = 0x106;  ///< Supervisor counter enable register
+    static constexpr uint16_t senvcfg  = 0x10A;  ///< Supervisor environment configuration register
+    static constexpr uint16_t scountinhibit = 0x120;  ///< Supervisor counter inhibit register
+    static constexpr uint16_t sscratch = 0x140;  ///< Supervisor scratch register
+    static constexpr uint16_t sepc     = 0x141;  ///< Supervisor exception program counter
+    static constexpr uint16_t scause   = 0x142;  ///< Supervisor trap cause register
+    static constexpr uint16_t stval    = 0x143;  ///< Supervisor bad address or instruction
+    static constexpr uint16_t sip      = 0x144;  ///< Supervisor interrupt pending register
+    static constexpr uint16_t scountovf = 0xDA0;  ///< Supervisor counter overflow register
+    static constexpr uint16_t satp     = 0x180;  ///< Supervisor address translation and protection register
+    static constexpr uint16_t scontext = 0x5A8;  ///< Supervisor context register
+
+    // Machine Information Registers
+    static constexpr uint16_t mvendorid = 0xF11;  ///< Vendor ID register
+    static constexpr uint16_t marchid   = 0xF12;  ///< Architecture ID register
+    static constexpr uint16_t mimpid    = 0xF13;  ///< Implementation ID register
+    static constexpr uint16_t mhartid   = 0xF14;  ///< Hardware thread ID register
+    static constexpr uint16_t mconfigptr = 0xF15;  ///< Machine configuration pointer register
+
+    // Machine Trap Setup
+    static constexpr uint16_t mstatus   = 0x300;  ///< Machine status register
+    static constexpr uint16_t misa      = 0x301;  ///< ISA and extensions register
+    static constexpr uint16_t medeleg   = 0x302;  ///< Machine exception delegation register
+    static constexpr uint16_t mideleg   = 0x303;  ///< Machine interrupt delegation register
+    static constexpr uint16_t mie       = 0x304;  ///< Machine interrupt enable register
+    static constexpr uint16_t mtvec     = 0x305;  ///< Machine trap handler base address
+    static constexpr uint16_t mcounteren = 0x306;  ///< Machine counter enable register
+    static constexpr uint16_t mstatush  = 0x310;  ///< Additional machine status (RV32 only)
+    static constexpr uint16_t medeleg_h = 0x312;  ///< Upper 32 bits of medeleg (RV32 only)
+
+    // Machine Trap Handling
+    static constexpr uint16_t mscratch  = 0x340;  ///< Machine scratch register
+    static constexpr uint16_t mepc      = 0x341;  ///< Machine exception program counter
+    static constexpr uint16_t mcause    = 0x342;  ///< Machine trap cause register
+    static constexpr uint16_t mtval     = 0x343;  ///< Machine bad address or instruction
+    static constexpr uint16_t mip       = 0x344;  ///< Machine interrupt pending register
+    static constexpr uint16_t mtinst    = 0x34A;  ///< Machine trap instruction register
+    static constexpr uint16_t mtval2    = 0x34B;  ///< Machine bad guest physical address
+};
+
+/**
+ * @brief mcause register bit definitions
+ * @tparam WORD_T Word type (uint32_t or uint64_t)
+ */
+template <typename WORD_T>
+struct mcause {
+    static constexpr WORD_T intr_mask         = 1 << (sizeof(WORD_T) * CHAR_BIT - 1); ///< Interrupt mask bit
+    static constexpr WORD_T intr_s_software   = 1 | intr_mask; ///< Supervisor software interrupt
+    static constexpr WORD_T intr_m_software   = 3 | intr_mask; ///< Machine software interrupt
+    static constexpr WORD_T intr_s_timer      = 5 | intr_mask; ///< Supervisor timer interrupt
+    static constexpr WORD_T intr_m_timer      = 7 | intr_mask; ///< Machine timer interrupt
+    static constexpr WORD_T intr_s_external   = 9 | intr_mask; ///< Supervisor external interrupt
+    static constexpr WORD_T intr_m_external   = 11 | intr_mask; ///< Machine external interrupt
+    static constexpr WORD_T intr_cnt_overflow = 13 | intr_mask; ///< Counter overflow interrupt
+
+    static constexpr WORD_T except_instr_misalign   = 0;  ///< Instruction address misaligned
+    static constexpr WORD_T except_instr_fault      = 1;  ///< Instruction access fault
+    static constexpr WORD_T except_illegal_instr    = 2;  ///< Illegal instruction
+    static constexpr WORD_T except_breakpoint       = 3;  ///< Breakpoint
+    static constexpr WORD_T except_load_misalign    = 4;  ///< Load address misaligned
+    static constexpr WORD_T except_load_fault       = 5;  ///< Load access fault
+    static constexpr WORD_T except_store_misalign   = 6;  ///< Store address misaligned
+    static constexpr WORD_T except_store_fault      = 7;  ///< Store access fault
+    static constexpr WORD_T except_env_call_u       = 8;  ///< Environment call from U-mode
+    static constexpr WORD_T except_env_call_s       = 9;  ///< Environment call from S-mode
+    static constexpr WORD_T except_env_call_m       = 11; ///< Environment call from M-mode
+    static constexpr WORD_T except_instr_page_fault = 12; ///< Instruction page fault
+    static constexpr WORD_T except_load_page_fault  = 13; ///< Load page fault
+    static constexpr WORD_T except_store_page_fault = 15; ///< Store page fault
+    static constexpr WORD_T except_software_check   = 18; ///< Software check failure
+    static constexpr WORD_T except_hardware_error   = 19; ///< Hardware error
+};
+
+/**
+ * @brief mstatus register bit definitions
+ * @tparam WORD_T Word type (uint32_t or uint64_t)
+ */
+template <typename WORD_T>
+struct mstatus {
+    static constexpr WORD_T sie   = WORD_T(1) << 1;   ///< Supervisor interrupt enable
+    static constexpr WORD_T mie   = WORD_T(1) << 3;   ///< Machine interrupt enable
+    static constexpr WORD_T spie  = WORD_T(1) << 5;   ///< Previous supervisor interrupt enable
+    static constexpr WORD_T ube   = WORD_T(1) << 6;   ///< User-mode endianness (1=big-endian)
+    static constexpr WORD_T mpie  = WORD_T(1) << 7;   ///< Previous machine interrupt enable
+    static constexpr WORD_T mppl  = WORD_T(1) << 11;  ///< Previous privilege mode (low bit)
+    static constexpr WORD_T mpph  = WORD_T(1) << 12;  ///< Previous privilege mode (high bit)
+    static constexpr WORD_T mprv  = WORD_T(1) << 17;  ///< Modify privilege for memory accesses
+    static constexpr WORD_T sum   = WORD_T(1) << 18;  ///< Permit supervisor user memory access
+    static constexpr WORD_T mxr   = WORD_T(1) << 19;  ///< Make executable pages readable
+    static constexpr WORD_T tvm   = WORD_T(1) << 20;  ///< Trap virtual memory operations
+    static constexpr WORD_T tw    = WORD_T(1) << 21;  ///< Timeout wait for WFI instruction
+    static constexpr WORD_T tsr   = WORD_T(1) << 22;  ///< Trap SRET instruction
+    static constexpr WORD_T sd    = WORD_T(1) << (sizeof(WORD_T) * CHAR_BIT - 1); ///< State dirty flag
+};
+
+/**
+ * @brief mstatush register bit definitions (RV32 only)
+ */
+struct mstatush {
+    static constexpr uint32_t sbe = uint32_t(1) << 4; ///< Supervisor endianness bit
+    static constexpr uint32_t mbe = uint32_t(1) << 5; ///< Machine endianness bit
+};
+
+/**
+ * @brief mstatus register specialization for 64-bit
+ */
+template <>
+struct mstatus<uint64_t> {
+    static constexpr uint64_t uxl0 = uint64_t(1) << 32; ///< User XLEN low bit
+    static constexpr uint64_t uxl1 = uint64_t(1) << 33; ///< User XLEN high bit
+    static constexpr uint64_t sxl0 = uint64_t(1) << 34; ///< Supervisor XLEN low bit
+    static constexpr uint64_t sxl1 = uint64_t(1) << 35; ///< Supervisor XLEN high bit
+    static constexpr uint64_t sbe  = uint64_t(1) << 36; ///< Supervisor endianness bit
+    static constexpr uint64_t mbe  = uint64_t(1) << 37; ///< Machine endianness bit
+};
+
+/**
+ * @brief mtvec register bit definitions
+ * @tparam WORD_T Word type (uint32_t or uint64_t)
+ */
+template <typename WORD_T>
+struct mtvec {
+    static constexpr WORD_T vectored = 1;  ///< Trap mode: vectored (1) or direct (0)
+};
+
+/**
+ * @brief mip register bit definitions
+ * @tparam WORD_T Word type (uint32_t or uint64_t)
+ */
+template <typename WORD_T>
+struct mip {
+    static constexpr WORD_T ssip   = 1 << 1;   ///< Supervisor software interrupt pending
+    static constexpr WORD_T msip   = 1 << 3;   ///< Machine software interrupt pending
+    static constexpr WORD_T stip   = 1 << 5;   ///< Supervisor timer interrupt pending
+    static constexpr WORD_T mtip   = 1 << 7;   ///< Machine timer interrupt pending
+    static constexpr WORD_T seip   = 1 << 9;   ///< Supervisor external interrupt pending
+    static constexpr WORD_T meip   = 1 << 11;  ///< Machine external interrupt pending
+    static constexpr WORD_T lcofip = 1 << 13;  ///< Local counter overflow interrupt pending
+};
+
+/**
+ * @brief mie register bit definitions
+ * @tparam WORD_T Word type (uint32_t or uint64_t)
+ */
+template <typename WORD_T>
+struct mie {
+    static constexpr WORD_T ssie   = 1 << 1;   ///< Supervisor software interrupt enable
+    static constexpr WORD_T msie   = 1 << 3;   ///< Machine software interrupt enable
+    static constexpr WORD_T stie   = 1 << 5;   ///< Supervisor timer interrupt enable
+    static constexpr WORD_T mtie   = 1 << 7;   ///< Machine timer interrupt enable
+    static constexpr WORD_T seie   = 1 << 9;   ///< Supervisor external interrupt enable
+    static constexpr WORD_T meie   = 1 << 11;  ///< Machine external interrupt enable
+    static constexpr WORD_T lcofie = 1 << 13;  ///< Local counter overflow interrupt enable
+};
 
 }
 
