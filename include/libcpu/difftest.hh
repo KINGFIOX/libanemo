@@ -75,7 +75,21 @@ class abstract_difftest: public abstract_cpu<WORD_T> {
         virtual bool get_difftest_error(void) const = 0;
 
         virtual bool stopped(void) const override {
-            return get_difftest_error() || ref->stopped();
+            if (get_difftest_error()) {
+                return true;
+            } else if (ref->stopped()) {
+                if (!dut->stopped()) {
+                    std::cerr << "libcpu: REF has stopped but DUT has not." << std::endl;
+                }
+                return true;
+            } else if (dut->stopped()) {
+                if (!ref->stopped()) {
+                    std::cerr << "libcpu: DUT has stopped but REF has not." << std::endl;
+                }
+                return true;
+            } else {
+                return false;
+            }
         }
 
         virtual void reset(WORD_T init_pc) override {

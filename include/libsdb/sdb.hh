@@ -548,6 +548,7 @@ void sdb<WORD_T>::cmd_trace(std::vector<std::string> args, sdb<WORD_T> *sdb_inst
     if (args.size() == 0) {
         instr = mem = func = trap = true;
     } else {
+        instr = mem = func = trap = false;
         for (auto s: args) {
             if (s == "instr") {
                 instr = true;
