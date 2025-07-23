@@ -136,7 +136,7 @@ struct event_t {
 
         std::ostringstream oss;
         oss << std::left << std::setw(10) << std::setfill(' ') << event_type_to_str(type) 
-            << " pc:0x" << std::hex << std::setw(sizeof(WORD_T)*2) << std::setfill('0') << pc << " "
+            << " pc:0x" << std::hex << std::setw(sizeof(WORD_T)*2) << std::setfill('0') << std::right << pc << " "
             << std::left << std::setw(label_width) << std::setfill(' ') << std::right  << label1 << ":0x" << std::hex << std::setw(sizeof(WORD_T)*2) << std::setfill('0') << val1 << " "
             << std::left << std::setw(label_width) << std::setfill(' ')  << std::right << label2 << ":0x" << std::hex << std::setw(sizeof(WORD_T)*2) << std::setfill('0') << val2;
 
