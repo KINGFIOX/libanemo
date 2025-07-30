@@ -195,7 +195,32 @@ void riscv_cpu<WORD_T>::mulh(riscv_cpu<WORD_T>* cpu, const decode_t& decode) {
         int64_t result = int64_t(int32_t(cpu->gpr[decode.rs1])) * int64_t(int32_t(cpu->gpr[decode.rs2]));
         cpu->gpr[decode.rd] = (result >> 32) & 0xffffffff;
     } else {
+        uint64_t a = cpu->gpr[decode.rs1];
+        uint64_t b = cpu->gpr[decode.rs2];
+        // Decompose into 32-bit halves
+        uint64_t a_lo = a & 0xFFFFFFFF;
+        uint64_t a_hi = a >> 32;
+        uint64_t b_lo = b & 0xFFFFFFFF;
+        uint64_t b_hi = b >> 32;
 
+        // Partial products
+        uint64_t p0 = a_lo * b_lo;
+        uint64_t p1 = a_lo * b_hi;
+        uint64_t p2 = a_hi * b_lo;
+        uint64_t p3 = a_hi * b_hi;
+
+        // Sum and carry computation
+        uint64_t S = p1 + p2;
+        uint64_t carry = ((S & 0xFFFFFFFF) + (p0 >> 32)) >> 32;
+        uint64_t hi_unsigned = p3 + (S >> 32) + carry;
+
+        // Adjustment for signed multiplication
+        uint64_t correction = 0;
+        int64_t a_signed = static_cast<int64_t>(a);
+        int64_t b_signed = static_cast<int64_t>(b);
+        if (a_signed < 0) correction += b;
+        if (b_signed < 0) correction += a;
+        cpu->gpr[decode.rd] = hi_unsigned - correction;
     }
 }
 
@@ -205,7 +230,30 @@ void riscv_cpu<WORD_T>::mulhsu(riscv_cpu<WORD_T>* cpu, const decode_t& decode) {
         int64_t result = int64_t(int32_t(cpu->gpr[decode.rs1])) * uint64_t(cpu->gpr[decode.rs2]);
         cpu->gpr[decode.rd] = (result >> 32) & 0xffffffff;
     } else {
+        uint64_t a = cpu->gpr[decode.rs1];
+        uint64_t b = cpu->gpr[decode.rs2];
+        // Decompose into 32-bit halves
+        uint64_t a_lo = a & 0xFFFFFFFF;
+        uint64_t a_hi = a >> 32;
+        uint64_t b_lo = b & 0xFFFFFFFF;
+        uint64_t b_hi = b >> 32;
 
+        // Partial products
+        uint64_t p0 = a_lo * b_lo;
+        uint64_t p1 = a_lo * b_hi;
+        uint64_t p2 = a_hi * b_lo;
+        uint64_t p3 = a_hi * b_hi;
+
+        // Sum and carry computation
+        uint64_t S = p1 + p2;
+        uint64_t carry = ((S & 0xFFFFFFFF) + (p0 >> 32)) >> 32;
+        uint64_t hi_unsigned = p3 + (S >> 32) + carry;
+
+        // Adjustment for signed-unsigned multiplication
+        uint64_t correction = 0;
+        int64_t a_signed = static_cast<int64_t>(a);
+        if (a_signed < 0) correction += b;
+        cpu->gpr[decode.rd] = hi_unsigned - correction;
     }
 }
 
@@ -215,7 +263,25 @@ void riscv_cpu<WORD_T>::mulhu(riscv_cpu<WORD_T>* cpu, const decode_t& decode) {
         uint64_t result = uint64_t(cpu->gpr[decode.rs1]) * uint64_t(cpu->gpr[decode.rs2]);
         cpu->gpr[decode.rd] = (result >> 32) & 0xffffffff;
     } else {
-        
+        uint64_t a = cpu->gpr[decode.rs1];
+        uint64_t b = cpu->gpr[decode.rs2];
+        // Decompose into 32-bit halves
+        uint64_t a_lo = a & 0xFFFFFFFF;
+        uint64_t a_hi = a >> 32;
+        uint64_t b_lo = b & 0xFFFFFFFF;
+        uint64_t b_hi = b >> 32;
+
+        // Partial products
+        uint64_t p0 = a_lo * b_lo;
+        uint64_t p1 = a_lo * b_hi;
+        uint64_t p2 = a_hi * b_lo;
+        uint64_t p3 = a_hi * b_hi;
+
+        // Sum and carry computation
+        uint64_t S = p1 + p2;
+        uint64_t carry = ((S & 0xFFFFFFFF) + (p0 >> 32)) >> 32;
+        uint64_t hi = p3 + (S >> 32) + carry;
+        cpu->gpr[decode.rd] = hi;
     }
 }
 
