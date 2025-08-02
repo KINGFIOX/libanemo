@@ -77,7 +77,7 @@ class riscv_privilege_module {
         /**
          * @brief Fetch instruction using physical address
          * 
-         * Handles instruction fetch from physical memory, bypassing address translation.
+         * This function is designed for simulating processors without virtual memory.
          * `op` will be populated with the `fetch` variant if successful, or `trap` if not.
          * 
          * @param op Execution result structure to populate with fetch details
@@ -87,7 +87,7 @@ class riscv_privilege_module {
         /**
          * @brief Fetch instruction using virtual address
          * 
-         * Handles instruction fetch with full virtual address translation.
+         * Handles instruction fetch with virtual address translation.
          * `op` will be populated with the `fetch` variant if successful, or `trap` if not.
          * 
          * @param op Execution result structure to populate with fetch details
@@ -97,7 +97,7 @@ class riscv_privilege_module {
         /**
          * @brief Perform physical address load operation
          * 
-         * Handles memory load operations using physical addresses, bypassing address translation.
+         * This function is designed for simulating processors without virtual memory.
          * `op` will be populated with the `retire` variant if successful, or the `trap` variant if not.
          * 
          * @param op Execution result structure containing load details
@@ -107,7 +107,7 @@ class riscv_privilege_module {
         /**
          * @brief Perform physical address store operation
          * 
-         * Handles memory store operations using physical addresses, bypassing address translation.
+         * This function is designed for simulating processors without virtual memory.
          * `op` will be populated with the `retire` variant if successful, or the `trap` variant if not.
          * 
          * @param op Execution result structure containing store details
@@ -187,14 +187,11 @@ class riscv_privilege_module {
         void csr_op(exec_result_t &op);
 
         /**
-         * @brief Handle ECALL instruction
+         * @brief Handle ecall, mret, sret instructions
          * 
-         * Processes environment calls by generating the appropriate trap.
-         * `op` will be populated with the `trap` varient.
-         * 
-         * @param op Execution result structure containing ECALL details
+         * @param op Execution result structure containing execution details
          */
-        void ecall(exec_result_t &op) const;
+        void sys_op(exec_result_t &op);
 };
 
 template <typename WORD_T>
@@ -223,7 +220,11 @@ template <typename WORD_T>
 std::optional<uint64_t> riscv_privilege_module<WORD_T>::vaddr_to_paddr(WORD_T vaddr) const {
     if (priv_level == priv_level_t::m) {
         return vaddr;
-    } 
+    } else if (priv_level == priv_level_t::s) {
+        return vaddr;
+    } else if (priv_level == priv_level_t::u) {
+        return vaddr;
+    }
 }
 
 template <typename WORD_T>
@@ -510,6 +511,7 @@ void riscv_privilege_module<WORD_T>::handle_exception(exec_result_t &op) {
 
     op.type = exec_result_type_t::retire;
     op.next_pc = target_addr;
+    op.retire.rd = 0;
 }
 
 #define CSRRCS(name) \
@@ -532,9 +534,9 @@ void riscv_privilege_module<WORD_T>::handle_exception(exec_result_t &op) {
     if (write) { \
         status.bit_name = value & riscv::csr_name<WORD_T>::bit_name; \
     } else if (set) { \
-        status.bit_name = status.bit_name || (value & riscv::csr_name<WORD_T>::bit_name); \
+        status.bit_name = value&riscv::csr_name<WORD_T>::bit_name ? true : status.bit_name; \
     } else if (clear) { \
-        status.bit_name = status.bit_name && !(value & riscv::csr_name<WORD_T>::bit_name); \
+        status.bit_name = value&riscv::csr_name<WORD_T>::bit_name ? false : status.bit_name; \
     }
 
 template <typename WORD_T>
@@ -558,6 +560,7 @@ void riscv_privilege_module<WORD_T>::csr_op(exec_result_t &op) {
 
     op.type = exec_result_type_t::retire;
     op.retire.rd = rd;
+    op.retire.value = 0;
     switch (addr) {
         case riscv::csr_addr::misa: {
             if constexpr (is_rv64) {
@@ -595,7 +598,7 @@ void riscv_privilege_module<WORD_T>::csr_op(exec_result_t &op) {
             }
             status.mpp = static_cast<priv_level_t>(mpp);
             // prevent invalid values
-            status.mpp = status.mpp!=priv_level_t::m && status.mpp!=priv_level_t::s ? priv_level_t::m : status.mpp;
+            status.mpp = status.mpp!=priv_level_t::u && status.mpp!=priv_level_t::s ? priv_level_t::m : status.mpp;
             STATUSRCS(mstatus, spp);
             STATUSRCS(mstatus, mpie);
             STATUSRCS(mstatus, spie);
@@ -616,17 +619,45 @@ void riscv_privilege_module<WORD_T>::csr_op(exec_result_t &op) {
 #undef STATUSRCS
 
 template <typename WORD_T>
-void riscv_privilege_module<WORD_T>::ecall(exec_result_t &op) const {
-    assert(op.type == exec_result_type_t::ecall);
-    op.type = exec_result_type_t::trap;
-    if (priv_level == priv_level_t::u) {
-        op.trap.cause = riscv::mcause<WORD_T>::except_env_call_u;
-    } else if (priv_level == priv_level_t::s) {
-        op.trap.cause = riscv::mcause<WORD_T>::except_env_call_s;
-    } else if (priv_level == priv_level_t::m) {
-        op.trap.cause = riscv::mcause<WORD_T>::except_env_call_m;
+void riscv_privilege_module<WORD_T>::sys_op(exec_result_t &op) {
+    assert(op.type == exec_result_type_t::sys_op);
+    if (op.sys_op.ecall) {
+        op.type = exec_result_type_t::trap;
+        if (priv_level == priv_level_t::u) {
+            op.trap.cause = riscv::mcause<WORD_T>::except_env_call_u;
+        } else if (priv_level == priv_level_t::s) {
+            op.trap.cause = riscv::mcause<WORD_T>::except_env_call_s;
+        } else if (priv_level == priv_level_t::m) {
+            op.trap.cause = riscv::mcause<WORD_T>::except_env_call_m;
+        }
+        op.trap.tval = 0;
+    } else if (op.sys_op.mret) {
+        if (priv_level != priv_level_t::m) {
+            op.type = exec_result_type_t::trap;
+            op.trap = {.cause=riscv::mcause<WORD_T>::except_illegal_instr, .tval=op.instr};  
+        } else {
+            priv_level = status.mpp;
+            status.mie = status.mpie;
+            status.mpie = 1;
+            status.mpp = priv_level_t::u;
+            op.type = exec_result_type_t::retire;
+            op.retire.rd = 0;
+            op.next_pc = mepc;
+        }
+    } else if (op.sys_op.sret) {
+        if (priv_level == priv_level_t::u) {
+            op.type = exec_result_type_t::trap;
+            op.trap = {.cause=riscv::mcause<WORD_T>::except_illegal_instr, .tval=op.instr};  
+        } else {
+            priv_level = status.spp ? priv_level_t::s : priv_level_t::u;
+            status.sie = status.spie;
+            status.spie = 1;
+            status.spp = 0;
+            op.type = exec_result_type_t::retire;
+            op.retire.rd = 0;
+            op.next_pc = sepc;
+        }
     }
-    op.trap.tval = 0;
 }
 
 }

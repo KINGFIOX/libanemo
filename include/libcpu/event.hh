@@ -28,7 +28,7 @@ enum class event_type_t {
     call,        ///< Function call - val1: target_addr, val2: stack_pointer
     call_ret,    ///< Function return - val1: target_addr, val2: stack_pointer
     trap,        ///< Trap handling - val1: mcause, val2: mtval
-    trap_ret,    ///< Trap return - val1: target_addr, val2: mstatus
+    trap_ret,    ///< Trap return - val1: target_addr, val2: custom value
     diff_error,  ///< Difftest error - val1: event_type, val2: instr_part1
     n_event_type ///< A place holder indicating the number of event types
 };
@@ -69,6 +69,9 @@ inline const char *event_type_to_str(event_type_t type) {
  *   - When representing a successful load: `val2` must contain the zero-extended data
  * - For `store` events:
  *   - May represent either a store attempt or a successful store operation
+ * - For `trap_ret` events:
+ *   - May represent either an attempt of xRET on RISC-V, or a successful xRET
+ *   - `val2` is for custom uses 
  *
  * Certain library components may impose additional requirements. For example,
  * some `io_dispatcher` subclasses requires `load` to represent only successful loads.

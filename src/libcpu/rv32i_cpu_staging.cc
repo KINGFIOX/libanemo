@@ -1,8 +1,9 @@
 #include <cstdint>
 #include <cassert>
 #include <libcpu/event.hh>
-#include <libcpu/riscv_user_core.hh>
 #include <libcpu/rv32i_cpu_staging.hh>
+#include <libcpu/riscv_user_core.hh>
+#include <libcpu/riscv_privilege_module.hh>
 #include <libcpu/riscv.hh>
 #include <libvio/width.hh>
 
@@ -83,13 +84,24 @@ void rv32i_cpu_staging::next_instruction(void) {
         }
     } else if (exec_result.type == exec_result_type_t::csr_op) {
         privilege_module.csr_op(exec_result);
-    } else if (exec_result.type == exec_result_type_t::ecall) {
-        privilege_module.ecall(exec_result);
+    } else if (exec_result.type == exec_result_type_t::sys_op) {
+        privilege_module.sys_op(exec_result);
+        if (event_buffer!=nullptr && exec_result.type==exec_result_type_t::retire) {
+            if (exec_result.sys_op.mret) {
+                event_buffer->push_back({.type=event_type_t::trap_ret, .pc=exec_result.pc, .val1=privilege_module.mepc, .val2=0});
+            } else if (exec_result.sys_op.sret) {
+                event_buffer->push_back({.type=event_type_t::trap_ret, .pc=exec_result.pc, .val1=privilege_module.sepc, .val2=0});
+            }
+        }
     }
 
     if (exec_result.type == exec_result_type_t::trap) {
+        if (exec_result.trap.cause == riscv::mcause<uint32_t>::except_breakpoint) {
+            is_stopped = true;
+            return;
+        }
         if (event_buffer != nullptr) {
-            event_buffer->push_back({event_type_t::trap, exec_result.trap.cause, exec_result.trap.tval});
+            event_buffer->push_back({.type=event_type_t::trap, .pc=exec_result.pc, .val1=exec_result.trap.cause, .val2=exec_result.trap.tval});
         }
         privilege_module.handle_exception(exec_result);
     } else {

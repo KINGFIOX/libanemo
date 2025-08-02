@@ -3,8 +3,8 @@
 
 #include <cstdint>
 #include <libcpu/abstract_cpu.hh>
-#include <libcpu/riscv_privilege_module.hpp>
 #include <libcpu/riscv_user_core.hh>
+#include <libcpu/riscv_privilege_module.hh>
 
 namespace libcpu {
 

@@ -46,7 +46,7 @@ class riscv_user_core {
             // Multiply/Divide
             mul, mulh, mulhsu, mulhu, div, divu, rem, remu,
             // System
-            ecall, ebreak,
+            ecall, ebreak, mret, sret,
             // RV64 specific instructions
             lwu, ld, sd, addiw, slliw, srliw, sraiw, addw, subw, sllw, srlw, sraw,
             // CSR functions
@@ -60,7 +60,7 @@ class riscv_user_core {
             fetch, decode,
             retire, ///< Committed or trap handled
             load, store,
-            trap, ecall, csr_op
+            trap, sys_op, csr_op
         };
 
         /**
@@ -102,6 +102,9 @@ class riscv_user_core {
                 struct {
                     WORD_T cause; WORD_T tval;
                 } trap;
+                struct {
+                    bool ecall; bool mret; bool sret;
+                } sys_op;
                 struct {
                     uint16_t addr; uint8_t rd;
                     bool read; bool write; bool set; bool clear; WORD_T value;
@@ -244,6 +247,8 @@ void riscv_user_core<WORD_T>::decode(exec_result_t &op) const {
     // System
     RISCV_INSTR_PAT(0b00000000000000000000000001110011, 0b11111111111111111111111111111111, r, ecall)
     RISCV_INSTR_PAT(0b00000000000100000000000001110011, 0b11111111111111111111111111111111, r, ebreak)
+    RISCV_INSTR_PAT(0b00110000001000000000000001110011, 0b11111111111111111111111111111111, r, mret)
+    RISCV_INSTR_PAT(0b00010000001000000000000001110011, 0b11111111111111111111111111111111, r, sret)
 
     // CSR operations
     RISCV_INSTR_PAT(0b00000000000000000001000001110011, 0b00000000000000000111000001111111, i, csrrw)
@@ -612,14 +617,26 @@ void riscv_user_core<WORD_T>::execute(exec_result_t &op) {
         }
 
         // System
+        case dispatch_t::ecall: {
+            op.type = exec_result_type_t::sys_op;
+            op.sys_op = {.ecall=true, .mret=false, .sret=false};
+            break;
+        }
         case dispatch_t::ebreak: {
             op.type = exec_result_type_t::trap;
             op.trap.cause = riscv::mcause<WORD_T>::except_breakpoint;
             op.trap.tval = op.pc;
             break;
         };
-        case dispatch_t::ecall: {
-            op.type = exec_result_type_t::ecall;
+        case dispatch_t::mret: {
+            op.type = exec_result_type_t::sys_op;
+            op.sys_op = {.ecall=false, .mret=true, .sret=false};
+            break;
+        }
+        case dispatch_t::sret: {
+            op.type = exec_result_type_t::sys_op;
+            op.sys_op = {.ecall=false, .mret=false, .sret=true};
+            break;
         }
         case dispatch_t::csrrw: {
             op.type = exec_result_type_t::csr_op;
@@ -681,7 +698,7 @@ void riscv_user_core<WORD_T>::execute(exec_result_t &op) {
             op.csr_op.addr = imm & 0xfff;
             op.csr_op.rd = rd;
             op.csr_op.read = true;
-            op.csr_op.write = true;
+            op.csr_op.write = false;
             op.csr_op.set = false;
             op.csr_op.clear = rs1!=0;
             op.csr_op.value = rs1;

@@ -116,7 +116,7 @@ void rv32i_cpu_system::mret(riscv_cpu<uint32_t>* riscv_cpu, const decode_t& deco
     uint32_t mepc = cpu->csr_read(riscv::csr_addr::mepc);
     if (cpu->event_buffer!=nullptr) {
         uint32_t mstatus = cpu->csr_read(riscv::csr_addr::mstatus);
-        cpu->event_buffer->push_back({.type=event_type_t::trap_ret, .pc=cpu->pc, .val1=mepc, .val2=mstatus});
+        cpu->event_buffer->push_back({.type=event_type_t::trap_ret, .pc=cpu->pc, .val1=mepc, .val2=0});
     }
     // restore pc
     cpu->next_pc = mepc;
