@@ -36,35 +36,35 @@ class abstract_difftest: public abstract_cpu<WORD_T> {
         }
 
         virtual const char *gpr_name(uint8_t addr) const override {
-            return ref->gpr_name(addr);
+            return dut->gpr_name(addr);
         }
 
         virtual uint8_t gpr_addr(const char *name) const override {
-            return ref->gpr_addr(name);
+            return dut->gpr_addr(name);
         }
 
         WORD_T get_pc(void) const override {
-            return ref->get_pc();
+            return dut->get_pc();
         }
 
         const WORD_T *get_gpr(void) const override {
-            return ref->get_gpr();
+            return dut->get_gpr();
         }
 
         WORD_T get_gpr(uint8_t addr) const override {
-            return ref->get_gpr(addr);
+            return dut->get_gpr(addr);
         }
 
         std::optional<WORD_T> vaddr_to_paddr(WORD_T vaddr) const override {
-            return ref->vaddr_to_paddr(vaddr);
+            return dut->vaddr_to_paddr(vaddr);
         }
 
         std::optional<WORD_T> vmem_peek(WORD_T addr, libvio::width_t width) const override {
-            return ref->vmem_peek(addr, width);
+            return dut->vmem_peek(addr, width);
         }
 
         std::optional<WORD_T> pmem_peek(WORD_T addr, libvio::width_t width) const override {
-            return ref->pmem_peek(addr, width);
+            return dut->pmem_peek(addr, width);
         }
 
         /**
@@ -145,14 +145,11 @@ class simple_difftest: public abstract_difftest<WORD_T> {
             // And all instructions are commited in order.
             // And traps cannot happen out of ordder.
             // This is the only assumption that can be made across all types of CPUs.
-            auto pull_events = [this](std::vector<event_t<WORD_T>> &dest, event_buffer_t *buffer, size_t begin, bool append=false) {
+            auto pull_events = [this](std::vector<event_t<WORD_T>> &dest, event_buffer_t *buffer, size_t begin) {
                 for (size_t i=begin; i<buffer->lastindex(); ++i) {
                     event_t<WORD_T> event = (*buffer)[i];
                     if (event.type==event_type_t::reg_write || event.type==event_type_t::trap || event.type==event_type_t::trap_ret) {
                         dest.push_back(event);
-                    }
-                    if (append && this->event_buffer!=nullptr) {
-                        this->event_buffer->push_back(event);
                     }
                 }
                 return buffer->lastindex();
@@ -163,10 +160,10 @@ class simple_difftest: public abstract_difftest<WORD_T> {
             std::vector<event_t<WORD_T>> dut_events{};
             this->dut->next_cycle();
             // record the events of DUT
-            dut_buffer_index = pull_events(dut_events, this->dut->event_buffer, dut_buffer_index, true);
+            dut_buffer_index = pull_events(dut_events, this->dut->event_buffer, dut_buffer_index);
             // step the ref 
             std::vector<event_t<WORD_T>> ref_events{};
-            while (ref_events.size() < dut_events.size()) {
+            while (ref_events.size()<dut_events.size() && !this->ref->stopped()) {
                 this->ref->next_instruction();
                 // record the events of REF
                 ref_buffer_index = pull_events(ref_events, this->ref->event_buffer, ref_buffer_index);
