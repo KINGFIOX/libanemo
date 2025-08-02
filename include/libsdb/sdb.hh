@@ -56,6 +56,7 @@ public:
     static void cmd_break(std::vector<std::string> args, sdb<WORD_T>* sdb_inst, std::ostream& os);
     static void cmd_eval(std::vector<std::string> args, sdb<WORD_T>* sdb_inst, std::ostream& os);
     static void cmd_trace(std::vector<std::string> args, sdb<WORD_T>* sdb_inst, std::ostream& os);
+    static void cmd_reset(std::vector<std::string> args, sdb<WORD_T>* sdb_inst, std::ostream& os);
 
     /**
      * @var commands
@@ -64,22 +65,35 @@ public:
      */
     static inline command_def_t commands[] = {
         {cmd_help, (const char* const[]){"help", "h", nullptr}, 
-            "help: Show help for commands\nUsage:\nhelp [command]"},
+            "help: Show help for commands\n"
+            "Usage:\n"
+            "  help [command]"},
         {cmd_quit, (const char* const[]){"quit", "q", nullptr}, 
-            "quit: Exit the debugger\nUsage:\nquit"},
+            "quit: Exit the debugger\n"
+            "Usage:\n"
+            "  quit"},
         {cmd_continue, (const char* const[]){"continue", "c", nullptr}, 
-            "continue: Continue execution until breakpoint, watchpoint, or program end\nUsage:\ncontinue"},
+            "continue: Continue execution until breakpoint, watchpoint, or program end\n"
+            "Usage:\n"
+            "  continue"},
         {cmd_step, (const char* const[]){"step", "s", "si", nullptr}, 
-            "step: Execute one or more instructions\nUsage:\nstep [n=1]"},
+            "step: Execute one or more instructions\n"
+            "Usage:\n"
+            "  step [n=1]"},
         {cmd_status, (const char* const[]){"status", "st", "regs", "r", nullptr}, 
-            "status: Show current PC and general purpose registers\nUsage:\nstatus"},
+            "status: Show current PC and general purpose registers\n"
+            "Usage:\n"
+            "  status"},
         {cmd_examine, (const char* const[]){"examine", "x", nullptr}, 
-            "examine: Dump memory\nUsage:\nexamine <base> <length> <word_sz>\n"
+            "examine: Dump memory\n"
+            "Usage:\n"
+            "   examine <base> <length> <word_sz>\n"
             "  <base>     - Starting address (expression)\n"
             "  <length>   - Number of words to display (expression)\n"
             "  <word_sz>  - Word size in bytes (1, 2, 4, or 8)"},
         {cmd_watch, (const char* const[]){"watch", "w", nullptr}, 
-            "watch: Manage watchpoints\nUsage:\n"
+            "watch: Manage watchpoints\n"
+            "Usage:\n"
             "  watch <expr> - Set a watchpoint on an expression\n"
             "  watch ls     - List all watchpoints\n"
             "  watch rm <n> - Remove watchpoint by index\n"
@@ -97,10 +111,20 @@ public:
             "  <n>    - Index of breakpoint to remove\n"
             "  on|off - Enable or disable trap breakpoints"},
         {cmd_eval, (const char* const[]){"evaluate", "eval", "e", "expr", nullptr},
-            "eval: Evaluate an expression\nUsage:\nevaluate <expression>"
+            "eval: Evaluate an expression\n"
+            "Usage:\n"
+            "  evaluate <expression>"
         },
         {cmd_trace, (const char* const[]){"trace", "t", "log", "events", nullptr},
-            "trace: show event logs\nUsage:\ntrace [instr] [mem] [func] [trap]"
+            "trace: show event logs\nUsage:\n"
+            "  trace [instr] [mem] [func] [trap]"
+        },
+        {cmd_reset, (const char* const[]){"reset", "rst", nullptr},
+            "reset: reset the cpu\n"
+            "Usage:\n"
+            "  reset <init_pc>\n"
+            "Note:\n"
+            "  This will not reset the content of the memory."
         }
     };
 
@@ -137,6 +161,12 @@ public:
      * @param cmd Command token to execute
      */
     virtual void execute_command(command_t cmd);
+
+    /**
+     * @brief Get the command prompt of SDB, may change according to the state.
+     * @return A constant string containing the command prompt.
+     */
+    virtual const char *get_prompt(void) const;
 
 protected:
     bool is_stopped = false; /**< Internal stopped state flag */
@@ -181,15 +211,15 @@ bool sdb<WORD_T>::stopped(void) const {
 
 template <typename WORD_T>
 void sdb<WORD_T>::show_command_help(const command_def_t &def, std::ostream &os) {
-    os << def.names[0] << std::endl;
+    os << def.help << std::endl;
     if (def.names[1] != nullptr) {
-        os << "Alias:";
+        os << "Alias:" << std::endl;
+        os << "  ";
         for (size_t i=1; def.names[i]!=nullptr; ++i) {
             os << ' ' << def.names[i];
         }
         os << std::endl;
     }
-    os << def.help << std::endl;
 }
 
 template <typename WORD_T>
@@ -601,6 +631,26 @@ void sdb<WORD_T>::cmd_trace(std::vector<std::string> args, sdb<WORD_T> *sdb_inst
 }
 
 template <typename WORD_T>
+void sdb<WORD_T>::cmd_reset(std::vector<std::string> args, sdb<WORD_T> *sdb_inst, std::ostream &os) {
+    if (args.size() == 0) {
+        show_command_help("reset", os);
+    } else {
+        std::string expr_str;
+        for (const auto& arg: args) {
+            expr_str += arg + " ";
+        }
+        auto init_pc_opt = evaluate_expression(expr_str, sdb_inst->cpu);
+        if (init_pc_opt.has_value()) {
+            WORD_T init_pc = init_pc_opt.value();
+            sdb_inst->cpu->reset(init_pc);
+        } else {
+            os << "libsdb: Invalid expression in arguments." << std::endl;
+            return;
+        }
+    }
+}
+
+template <typename WORD_T>
 bool sdb<WORD_T>::check_watchpoints(std::ostream &os) {
     for (auto &wp : watchpoints) {
         auto new_val = evaluate_expression(wp.expr, cpu);
@@ -641,6 +691,11 @@ void sdb<WORD_T>::execute_steps(size_t n, std::ostream &os) {
             break;
         }
     }
+}
+
+template <typename WORD_T>
+const char* sdb<WORD_T>::get_prompt(void) const {
+    return "sdb> ";
 }
 
 }
