@@ -1,28 +1,27 @@
 #include <cstdint>
 #include <cassert>
 #include <libcpu/event.hh>
-#include <libcpu/rv32i_cpu_staging.hh>
+#include <libcpu/rv64i_cpu_system.hh>
 #include <libcpu/riscv_user_core.hh>
 #include <libcpu/riscv_privilege_module.hh>
 #include <libcpu/riscv.hh>
 #include <libvio/width.hh>
-#include <optional>
 
 namespace libcpu {
 
-uint8_t rv32i_cpu_staging::n_gpr(void) const {
+uint8_t rv64i_cpu_system::n_gpr(void) const {
     return 32;
 }
 
-const char *rv32i_cpu_staging::gpr_name(uint8_t addr) const {
+const char *rv64i_cpu_system::gpr_name(uint8_t addr) const {
     return riscv::gpr_name(addr);
 }
 
-uint8_t rv32i_cpu_staging::gpr_addr(const char *name) const {
+uint8_t rv64i_cpu_system::gpr_addr(const char *name) const {
     return riscv::gpr_addr(name);
 }
 
-void rv32i_cpu_staging::reset(uint32_t init_pc) {
+void rv64i_cpu_system::reset(word_t init_pc) {
     privilege_module.instr_bus = instr_bus;
     privilege_module.data_bus = data_bus;
     privilege_module.mmio_bus = mmio_bus;
@@ -33,23 +32,23 @@ void rv32i_cpu_staging::reset(uint32_t init_pc) {
     is_stopped = false;
 }
 
-uint32_t rv32i_cpu_staging::get_pc(void) const {
+uint64_t rv64i_cpu_system::get_pc(void) const {
     return exec_result.pc;
 }
 
-const uint32_t *rv32i_cpu_staging::get_gpr(void) const {
+const uint64_t *rv64i_cpu_system::get_gpr(void) const {
     return user_core.gpr;
 }
 
-uint32_t rv32i_cpu_staging::get_gpr(uint8_t addr) const {
+uint64_t rv64i_cpu_system::get_gpr(uint8_t addr) const {
     return user_core.gpr[addr];
 }
 
-void rv32i_cpu_staging::next_cycle(void) {
+void rv64i_cpu_system::next_cycle(void) {
     next_instruction();
 }
 
-void rv32i_cpu_staging::next_instruction(void) {
+void rv64i_cpu_system::next_instruction(void) {
     privilege_module.paddr_fetch_instruction(exec_result);
 
     if (exec_result.type == exec_result_type_t::fetch) {
@@ -126,15 +125,15 @@ void rv32i_cpu_staging::next_instruction(void) {
     }
 }
 
-bool rv32i_cpu_staging::stopped(void) const {
+bool rv64i_cpu_system::stopped(void) const {
     return is_stopped;
 }
 
-std::optional<uint32_t> rv32i_cpu_staging::get_trap(void) const {
+std::optional<uint64_t> rv64i_cpu_system::get_trap(void) const {
     return last_trap;
 }
 
-std::optional<uint32_t> rv32i_cpu_staging::pmem_peek(uint32_t addr, libvio::width_t width) const {
+std::optional<uint64_t> rv64i_cpu_system::pmem_peek(word_t addr, libvio::width_t width) const {
     return data_bus->read(addr, width);
 }
 

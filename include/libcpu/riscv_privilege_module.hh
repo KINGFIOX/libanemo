@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <libcpu/memory.hh>
+#include <libcpu/memory_staging.hh>
 #include <libcpu/riscv.hh>
 #include <libcpu/riscv_user_core.hh>
 #include <libvio/bus.hh>
@@ -47,8 +48,8 @@ class riscv_privilege_module {
         WORD_T mepc, mtvec, mcause, mtval, mscratch, mie, mip, medeleg, mideleg;
         WORD_T sepc, stvec, scause, stval, sscratch, sie, sip;
 
-        abstract_memory<WORD_T> *instr_bus;
-        abstract_memory<WORD_T> *data_bus;
+        memory_staging *instr_bus;
+        memory_staging *data_bus;
         libvio::io_agent *mmio_bus;
 
         struct {

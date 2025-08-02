@@ -48,7 +48,7 @@ class riscv_user_core {
             // System
             ecall, ebreak, mret, sret,
             // RV64 specific instructions
-            lwu, ld, sd, addiw, slliw, srliw, sraiw, addw, subw, sllw, srlw, sraw,
+            lwu, ld, sd, addiw, slliw, srliw, sraiw, addw, subw, sllw, srlw, sraw, mulw, divw, divuw, remw, remuw,
             // CSR functions
             csrrw, csrrs, csrrc, csrrwi, csrrsi, csrrci,
         };
@@ -137,31 +137,31 @@ void riscv_user_core<WORD_T>::reset(void) {
 #define rd_r(instr)  (((instr) >> 7)  & 0x1F)
 
 // I-type
-#define imm_i(WORD_T, instr) ((std::make_signed_t<WORD_T>(instr)) >> 20)
+#define imm_i(WORD_T, instr) ((std::make_signed_t<WORD_T>(int32_t(instr))) >> 20)
 #define rs1_i(instr) (((instr) >> 15) & 0x1F)
 #define rs2_i(instr) (0)
 #define rd_i(instr)  (((instr) >> 7)  & 0x1F)
 
 // S-type
-#define imm_s(WORD_T, instr) ((std::make_signed_t<WORD_T>((instr) & 0xfe000000) >> 20) | (((instr) >> 7) & 0x1f))
+#define imm_s(WORD_T, instr) ((std::make_signed_t<WORD_T>(int32_t((instr) & 0xfe000000) >> 20)) | (((instr) >> 7) & 0x1f))
 #define rs1_s(instr) (((instr) >> 15) & 0x1F)
 #define rs2_s(instr) (((instr) >> 20) & 0x1F)
 #define rd_s(instr)  (0)
 
 // B-type
-#define imm_b(WORD_T, instr) ((std::make_signed_t<WORD_T>((instr) & 0x80000000) >> 19) | (((instr) & 0x80) << 4) | (((instr) >> 20) & 0x7e0) | (((instr) >> 7) & 0x1e))
+#define imm_b(WORD_T, instr) ((std::make_signed_t<WORD_T>(int32_t((instr) & 0x80000000) >> 19)) | (((instr) & 0x80) << 4) | (((instr) >> 20) & 0x7e0) | (((instr) >> 7) & 0x1e))
 #define rs1_b(instr) (((instr) >> 15) & 0x1F)
 #define rs2_b(instr) (((instr) >> 20) & 0x1F)
 #define rd_b(instr)  (0)
 
 // U-type
-#define imm_u(WORD_T, instr) (std::make_signed_t<WORD_T>((instr)&0xfffff000))
+#define imm_u(WORD_T, instr) (std::make_signed_t<WORD_T>(int32_t((instr)&0xfffff000)))
 #define rs1_u(instr) (0)
 #define rs2_u(instr) (0)
 #define rd_u(instr)  (((instr) >> 7)  & 0x1F)
 
 // J-type
-#define imm_j(WORD_T, instr) ((std::make_signed_t<WORD_T>((instr) & 0x80000000) >> 11) | ((instr) & 0xff000) | (((instr) >> 9) & 0x800) | (((instr) >> 20) & 0x7fe))
+#define imm_j(WORD_T, instr) ((std::make_signed_t<WORD_T>(int32_t((instr) & 0x80000000)) >> 11) | ((instr) & 0xff000) | (((instr) >> 9) & 0x800) | (((instr) >> 20) & 0x7fe))
 #define rs1_j(instr) (0)
 #define rs2_j(instr) (0)
 #define rd_j(instr)  (((instr) >> 7)  & 0x1F)
@@ -257,6 +257,8 @@ void riscv_user_core<WORD_T>::decode(exec_result_t &op) const {
     RISCV_INSTR_PAT(0b00000000000000000101000001110011, 0b00000000000000000111000001111111, i, csrrwi)
     RISCV_INSTR_PAT(0b00000000000000000110000001110011, 0b00000000000000000111000001111111, i, csrrsi)
     RISCV_INSTR_PAT(0b00000000000000000111000001110011, 0b00000000000000000111000001111111, i, csrrci)
+
+    // RV64 additions
     RISCV_INSTR_PAT(0b00000000000000000110000000000011, 0b00000000000000000111000001111111, i, lwu)
     RISCV_INSTR_PAT(0b00000000000000000011000000000011, 0b00000000000000000111000001111111, i, ld)
     RISCV_INSTR_PAT(0b00000000000000000011000000100011, 0b00000000000000000111000001111111, s, sd)
@@ -269,6 +271,11 @@ void riscv_user_core<WORD_T>::decode(exec_result_t &op) const {
     RISCV_INSTR_PAT(0b00000000000000000001000000111011, 0b11111110000000000111000001111111, r, sllw)
     RISCV_INSTR_PAT(0b00000000000000000101000000111011, 0b11111110000000000111000001111111, r, srlw)
     RISCV_INSTR_PAT(0b01000000000000000101000000111011, 0b11111110000000000111000001111111, r, sraw)
+    RISCV_INSTR_PAT(0b00000010000000000000000000111011, 0b11111110000000000111000001111111, r, mulw)
+    RISCV_INSTR_PAT(0b00000010000000000100000000111011, 0b11111110000000000111000001111111, r, divw)
+    RISCV_INSTR_PAT(0b00000010000000000101000000111011, 0b11111110000000000111000001111111, r, divuw)
+    RISCV_INSTR_PAT(0b00000010000000000110000000111011, 0b11111110000000000111000001111111, r, remw)
+    RISCV_INSTR_PAT(0b00000010000000000111000000111011, 0b11111110000000000111000001111111, r, remuw)
 
     // Fallback case for invalid instructions
     { op = {.type=exec_result_type_t::trap, .trap={.cause=riscv::mcause<WORD_T>::except_illegal_instr, .tval=instr}}; }
@@ -735,8 +742,7 @@ void riscv_user_core<WORD_T>::execute(exec_result_t &op) {
         }
         case dispatch_t::addiw: {
             if constexpr (is_rv64) {
-                op.type = exec_result_type_t::retire;
-                    int32_t a = static_cast<int32_t>(gpr[rs1]);
+                int32_t a = static_cast<int32_t>(gpr[rs1]);
                 int32_t b = static_cast<int32_t>(imm);
                 int32_t res32 = a + b;
                 op.retire.value = static_cast<WORD_T>(static_cast<int64_t>(res32));
@@ -747,8 +753,7 @@ void riscv_user_core<WORD_T>::execute(exec_result_t &op) {
         }
         case dispatch_t::slliw: {
             if constexpr (is_rv64) {
-                op.type = exec_result_type_t::retire;
-                    uint8_t shamt = imm & 0x1F;
+                uint8_t shamt = imm & 0x1F;
                 uint32_t val = static_cast<uint32_t>(gpr[rs1]);
                 val <<= shamt;
                 op.retire.value = static_cast<WORD_T>(static_cast<int32_t>(val));
@@ -759,8 +764,7 @@ void riscv_user_core<WORD_T>::execute(exec_result_t &op) {
         }
         case dispatch_t::srliw: {
             if constexpr (is_rv64) {
-                op.type = exec_result_type_t::retire;
-                    uint8_t shamt = imm & 0x1F;
+                uint8_t shamt = imm & 0x1F;
                 uint32_t val = static_cast<uint32_t>(gpr[rs1]);
                 val >>= shamt;
                 op.retire.value = static_cast<WORD_T>(static_cast<int32_t>(val));
@@ -771,8 +775,7 @@ void riscv_user_core<WORD_T>::execute(exec_result_t &op) {
         }
         case dispatch_t::sraiw: {
             if constexpr (is_rv64) {
-                op.type = exec_result_type_t::retire;
-                    uint8_t shamt = imm & 0x1F;
+                uint8_t shamt = imm & 0x1F;
                 int32_t val = static_cast<int32_t>(gpr[rs1]);
                 val >>= shamt;
                 op.retire.value = static_cast<WORD_T>(val);
@@ -783,8 +786,7 @@ void riscv_user_core<WORD_T>::execute(exec_result_t &op) {
         }
         case dispatch_t::addw: {
             if constexpr (is_rv64) {
-                op.type = exec_result_type_t::retire;
-                    int32_t a = static_cast<int32_t>(gpr[rs1]);
+                int32_t a = static_cast<int32_t>(gpr[rs1]);
                 int32_t b = static_cast<int32_t>(gpr[rs2]);
                 int32_t res32 = a + b;
                 op.retire.value = static_cast<WORD_T>(static_cast<int64_t>(res32));
@@ -795,8 +797,7 @@ void riscv_user_core<WORD_T>::execute(exec_result_t &op) {
         }
         case dispatch_t::subw: {
             if constexpr (is_rv64) {
-                op.type = exec_result_type_t::retire;
-                    int32_t a = static_cast<int32_t>(gpr[rs1]);
+                int32_t a = static_cast<int32_t>(gpr[rs1]);
                 int32_t b = static_cast<int32_t>(gpr[rs2]);
                 int32_t res32 = a - b;
                 op.retire.value = static_cast<WORD_T>(static_cast<int64_t>(res32));
@@ -807,8 +808,7 @@ void riscv_user_core<WORD_T>::execute(exec_result_t &op) {
         }
         case dispatch_t::sllw: {
             if constexpr (is_rv64) {
-                op.type = exec_result_type_t::retire;
-                    uint8_t shamt = gpr[rs2] & 0x1F;
+                uint8_t shamt = gpr[rs2] & 0x1F;
                 uint32_t val = static_cast<uint32_t>(gpr[rs1]);
                 val <<= shamt;
                 op.retire.value = static_cast<WORD_T>(static_cast<int32_t>(val));
@@ -819,8 +819,7 @@ void riscv_user_core<WORD_T>::execute(exec_result_t &op) {
         }
         case dispatch_t::srlw: {
             if constexpr (is_rv64) {
-                op.type = exec_result_type_t::retire;
-                    uint8_t shamt = gpr[rs2] & 0x1F;
+                uint8_t shamt = gpr[rs2] & 0x1F;
                 uint32_t val = static_cast<uint32_t>(gpr[rs1]);
                 val >>= shamt;
                 op.retire.value = static_cast<WORD_T>(static_cast<int32_t>(val));
@@ -831,11 +830,83 @@ void riscv_user_core<WORD_T>::execute(exec_result_t &op) {
         }
         case dispatch_t::sraw: {
             if constexpr (is_rv64) {
-                op.type = exec_result_type_t::retire;
-                    uint8_t shamt = gpr[rs2] & 0x1F;
+                uint8_t shamt = gpr[rs2] & 0x1F;
                 int32_t val = static_cast<int32_t>(gpr[rs1]);
                 val >>= shamt;
                 op.retire.value = static_cast<WORD_T>(val);
+            } else {
+                invalid_instruction();
+            }
+            break;
+        }
+        case dispatch_t::mulw: {
+            if constexpr (is_rv64) {
+                constexpr uint64_t mask = 0xffffffff;
+                op.retire.value = static_cast<uint32_t>(gpr[rs1]&mask) * static_cast<uint32_t>(gpr[rs2]&mask);
+            } else {
+                invalid_instruction();
+            }
+            break;
+        }
+        case dispatch_t::divw: {
+            if constexpr (is_rv64) {
+                constexpr uint64_t mask = 0xffffffff;
+                int32_t a = gpr[rs1] & mask;
+                int32_t b = gpr[rs2] & mask;
+                if (b == 0) {
+                    op.retire.value = -1;
+                } else if (a == std::numeric_limits<int32_t>::min() && b == -1) {
+                    op.retire.value = a;
+                } else {
+                    op.retire.value = int64_t(int32_t(a/b));
+                }
+            } else {
+                invalid_instruction();
+            }
+            break;
+        }
+        case dispatch_t::divuw: {
+            if constexpr (is_rv64) {
+                constexpr uint64_t mask = 0xffffffff;
+                uint32_t a = gpr[rs1] & mask;
+                uint32_t b = gpr[rs2] & mask;
+                if (b == 0) {
+                    op.retire.value = -1;
+                } else {
+                    op.retire.value = int64_t(int32_t(a/b));
+                }
+            } else {
+                invalid_instruction();
+            }
+            break;
+        }
+        case dispatch_t::remw: {
+            if constexpr (is_rv64) {
+                constexpr uint64_t mask = 0xffffffff;
+                int32_t a = gpr[rs1] & mask;
+                int32_t b = gpr[rs2] & mask;
+                if (b == 0) {
+                    op.retire.value = a;
+                } else if (a == std::numeric_limits<int32_t>::min() && b == -1) {
+                    op.retire.value = 0;
+                } else {
+                    op.retire.value = int64_t(int32_t(a%b));
+                }
+            } else {
+                invalid_instruction();
+            }
+            break;
+        }
+        case dispatch_t::remuw: {
+            if constexpr (is_rv64) {
+                constexpr uint64_t mask = 0xffffffff;
+                uint32_t a = gpr[rs1] & mask;
+                uint32_t b = gpr[rs2] & mask;
+                if (b == 0) {
+                    op.retire.value = a;
+                } else {
+                    op.retire.value = int64_t(int32_t(a%b));
+                }
             } else {
                 invalid_instruction();
             }

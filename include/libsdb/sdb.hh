@@ -1,6 +1,7 @@
 #ifndef LIBSDB_SDB_HH
 #define LIBSDB_SDB_HH
 
+#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -9,6 +10,7 @@
 #include <iostream>
 #include <libcpu/event.hh>
 #include <ostream>
+#include <stddef.h>
 #include <vector>
 #include <string>
 #include <libsdb/commandline.hh>
@@ -329,11 +331,12 @@ void sdb<WORD_T>::cmd_status(std::vector<std::string> args, sdb<WORD_T> *sdb_ins
         return;
     }
     
-    os << "  pc=0x" << std::hex << sdb_inst->cpu->get_pc() << "\n";
+    constexpr size_t word_size = sizeof(WORD_T) * CHAR_BIT;
+    os << "  pc=0x" << std::setw(word_size/4) << std::setfill('0') << std::hex << sdb_inst->cpu->get_pc() << "\n";
     for (uint8_t i=0; i<sdb_inst->cpu->n_gpr(); ++i) {
         os << std::right << std::setw(4) << std::setfill(' ') << sdb_inst->cpu->gpr_name(i) << "=0x" 
-           << std::hex << std::setw(sizeof(WORD_T)*2) << std::setfill('0') << sdb_inst->cpu->get_gpr(i) << ' ';
-        if (i%8 == 7) {
+           << std::hex << std::setw(word_size/4) << std::setfill('0') << sdb_inst->cpu->get_gpr(i) << ' ';
+        if ((word_size<=32)&&(i%8==7) || (word_size>32)&&(i%4==3)) {
             os << std::endl;
         }
     }
@@ -451,6 +454,7 @@ template <typename WORD_T>
 void sdb<WORD_T>::cmd_break(std::vector<std::string> args, sdb<WORD_T> *sdb_inst, std::ostream &os) {
     if (args.empty()) {
         show_command_help("break", os);
+        return;
     }
     
     if (args[0] == "ls") {

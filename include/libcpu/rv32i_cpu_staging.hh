@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <libcpu/abstract_cpu.hh>
+#include <libcpu/memory_staging.hh>
 #include <libcpu/riscv_user_core.hh>
 #include <libcpu/riscv_privilege_module.hh>
 
@@ -13,6 +14,9 @@ class rv32i_cpu_staging : public abstract_cpu<uint32_t> {
         using dispatch_t  = riscv_user_core<uint32_t>::dispatch_t;
         using exec_result_type_t = riscv_user_core<uint32_t>::exec_result_type_t;
         using exec_result_t = riscv_user_core<uint32_t>::exec_result_t;
+
+        memory_staging *instr_bus = nullptr;
+        memory_staging *data_bus = nullptr;
 
         virtual uint8_t n_gpr(void) const override;
         virtual const char *gpr_name(uint8_t addr) const override;
@@ -31,6 +35,7 @@ class rv32i_cpu_staging : public abstract_cpu<uint32_t> {
         exec_result_t exec_result;
         riscv_user_core<uint32_t> user_core;
         riscv_privilege_module<uint32_t> privilege_module;
+        std::optional<uint32_t> last_trap;
         bool is_stopped;
 };
 

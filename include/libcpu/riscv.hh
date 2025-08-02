@@ -122,7 +122,7 @@ struct csr_addr {
  */
 template <typename WORD_T>
 struct mcause {
-    static constexpr WORD_T intr_mask         = 1 << (sizeof(WORD_T) * CHAR_BIT - 1); ///< Interrupt mask bit
+    static constexpr WORD_T intr_mask         = WORD_T(1) << (sizeof(WORD_T) * CHAR_BIT - 1); ///< Interrupt mask bit
     static constexpr WORD_T intr_s_software   = 1 | intr_mask; ///< Supervisor software interrupt
     static constexpr WORD_T intr_m_software   = 3 | intr_mask; ///< Machine software interrupt
     static constexpr WORD_T intr_s_timer      = 5 | intr_mask; ///< Supervisor timer interrupt
@@ -150,15 +150,11 @@ struct mcause {
 };
 
 /**
- * @brief mstatus register bit definitions
- * @tparam WORD_T Word type (uint32_t or uint64_t)
- */
-/**
- * @brief mstatus register bit definitions
+ * @brief mstatus register bit definitions for both rv32 and rv64
  * @tparam WORD_T Word type (uint32_t or uint64_t)
  */
 template <typename WORD_T>
-struct mstatus {
+struct mstatus_common {
     static constexpr WORD_T sie   = WORD_T(1) << 1;   ///< Supervisor interrupt enable
     static constexpr WORD_T mie   = WORD_T(1) << 3;   ///< Machine interrupt enable
     static constexpr WORD_T spie  = WORD_T(1) << 5;   ///< Previous supervisor interrupt enable
@@ -186,20 +182,17 @@ struct mstatus {
     static constexpr WORD_T sd    = WORD_T(1) << (sizeof(WORD_T) * CHAR_BIT - 1); ///< State dirty flag
 };
 
+template <typename WORD_T>
+struct mstatus: mstatus_common<WORD_T> {};
 
-/**
- * @brief mstatush register bit definitions (RV32 only)
- */
-struct mstatush {
-    static constexpr uint32_t sbe = uint32_t(1) << 4; ///< Supervisor endianness bit
-    static constexpr uint32_t mbe = uint32_t(1) << 5; ///< Machine endianness bit
-};
+template <>
+struct mstatus<uint32_t>: mstatus_common<uint32_t> {};
 
 /**
  * @brief mstatus register specialization for 64-bit
  */
 template <>
-struct mstatus<uint64_t> {
+struct mstatus<uint64_t>: mstatus_common<uint64_t> {
     static constexpr uint64_t uxl  = uint64_t(3) << 32; ///< User XLEN
     static constexpr uint64_t uxll = uint64_t(1) << 32; ///< User XLEN low bit
     static constexpr uint64_t uxlh = uint64_t(1) << 33; ///< User XLEN high bit
@@ -208,6 +201,14 @@ struct mstatus<uint64_t> {
     static constexpr uint64_t sxlh = uint64_t(1) << 35; ///< Supervisor XLEN high bit
     static constexpr uint64_t sbe  = uint64_t(1) << 36; ///< Supervisor endianness bit
     static constexpr uint64_t mbe  = uint64_t(1) << 37; ///< Machine endianness bit
+};
+
+/**
+ * @brief mstatush register bit definitions (RV32 only)
+ */
+struct mstatush {
+    static constexpr uint32_t sbe = uint32_t(1) << 4; ///< Supervisor endianness bit
+    static constexpr uint32_t mbe = uint32_t(1) << 5; ///< Machine endianness bit
 };
 
 /**
