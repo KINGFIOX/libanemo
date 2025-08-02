@@ -10,8 +10,8 @@ namespace libcpu::riscv {
 
 enum class priv_level_t {
     u = 0,
-    h = 1,
-    s = 2,
+    s = 1,
+    h = 2,
     m = 3,
 };
 
@@ -19,38 +19,10 @@ enum class priv_level_t {
  * @brief Enumeration of RISC-V general-purpose register addresses.
  */
 enum gpr_addr_t: uint8_t {
-    X0  = 0,   ///< Hard-wired zero (x0). Always returns 0 when read.
-    RA  = 1,   ///< Return address (x1). Stores return address for function calls.
-    SP  = 2,   ///< Stack pointer (x2). Points to the top of the stack.
-    GP  = 3,   ///< Global pointer (x3). Points to global data area.
-    TP  = 4,   ///< Thread pointer (x4). Used for thread-local storage.
-    T0  = 5,   ///< Temporary/alternate link register (x5).
-    T1  = 6,   ///< Temporary register (x6).
-    T2  = 7,   ///< Temporary register (x7).
-    S0  = 8,   ///< Saved register/frame pointer (x8). Also called FP.
-    S1  = 9,   ///< Saved register (x9). Preserved across function calls.
-    A0  = 10,  ///< Function argument/return value (x10). First argument.
-    A1  = 11,  ///< Function argument/return value (x11). Second argument.
-    A2  = 12,  ///< Function argument (x12). Third argument.
-    A3  = 13,  ///< Function argument (x13). Fourth argument.
-    A4  = 14,  ///< Function argument (x14). Fifth argument.
-    A5  = 15,  ///< Function argument (x15). Sixth argument.
-    A6  = 16,  ///< Function argument (x16). Seventh argument.
-    A7  = 17,  ///< Function argument (x17). Eighth argument (syscall number).
-    S2  = 18,  ///< Saved register (x18).
-    S3  = 19,  ///< Saved register (x19).
-    S4  = 20,  ///< Saved register (x20).
-    S5  = 21,  ///< Saved register (x21).
-    S6  = 22,  ///< Saved register (x22).
-    S7  = 23,  ///< Saved register (x23).
-    S8  = 24,  ///< Saved register (x24).
-    S9  = 25,  ///< Saved register (x25).
-    S10 = 26,  ///< Saved register (x26).
-    S11 = 27,  ///< Saved register (x27).
-    T3  = 28,  ///< Temporary register (x28).
-    T4  = 29,  ///< Temporary register (x29).
-    T5  = 30,  ///< Temporary register (x30).
-    T6  = 31   ///< Temporary register (x31).
+    X0 = 0,  RA = 1,  SP = 2,  GP = 3,  TP = 4,  T0 = 5,  T1 = 6,  T2 = 7,
+    S0 = 8,  S1 = 9,  A0 = 10, A1 = 11, A2 = 12, A3 = 13, A4 = 14, A5 = 15,
+    A6 = 16, A7 = 17, S2 = 18, S3 = 19, S4 = 20, S5 = 21, S6 = 22, S7 = 23,
+    S8 = 24, S9 = 25, S10 = 26, S11 = 27, T3 = 28, T4 = 29, T5 = 30, T6 = 31
 };
 
 /**
@@ -181,6 +153,10 @@ struct mcause {
  * @brief mstatus register bit definitions
  * @tparam WORD_T Word type (uint32_t or uint64_t)
  */
+/**
+ * @brief mstatus register bit definitions
+ * @tparam WORD_T Word type (uint32_t or uint64_t)
+ */
 template <typename WORD_T>
 struct mstatus {
     static constexpr WORD_T sie   = WORD_T(1) << 1;   ///< Supervisor interrupt enable
@@ -188,8 +164,19 @@ struct mstatus {
     static constexpr WORD_T spie  = WORD_T(1) << 5;   ///< Previous supervisor interrupt enable
     static constexpr WORD_T ube   = WORD_T(1) << 6;   ///< User-mode endianness (1=big-endian)
     static constexpr WORD_T mpie  = WORD_T(1) << 7;   ///< Previous machine interrupt enable
+    static constexpr WORD_T spp   = WORD_T(1) << 8;   ///< Supervisor previous privilege mode
+    static constexpr WORD_T mpp   = WORD_T(3) << 11;  ///< Previous privilege mode
     static constexpr WORD_T mppl  = WORD_T(1) << 11;  ///< Previous privilege mode (low bit)
     static constexpr WORD_T mpph  = WORD_T(1) << 12;  ///< Previous privilege mode (high bit)
+    static constexpr WORD_T fs    = WORD_T(3) << 12;  ///< Floating-point unit status
+    static constexpr WORD_T fs0   = WORD_T(1) << 12;  ///< Floating-point unit status (bit 0)
+    static constexpr WORD_T fs1   = WORD_T(1) << 13;  ///< Floating-point unit status (bit 1)
+    static constexpr WORD_T xs    = WORD_T(3) << 14;  ///< Extension status
+    static constexpr WORD_T xsl   = WORD_T(1) << 14;  ///< Extension status (bit 0)
+    static constexpr WORD_T xsh   = WORD_T(1) << 15;  ///< Extension status (bit 1)
+    static constexpr WORD_T vs    = WORD_T(3) << 16;  ///< Vector extension status
+    static constexpr WORD_T vsl   = WORD_T(1) << 16;  ///< Vector extension status (bit 0)
+    static constexpr WORD_T vsh   = WORD_T(1) << 17;  ///< Vector extension status (bit 1)
     static constexpr WORD_T mprv  = WORD_T(1) << 17;  ///< Modify privilege for memory accesses
     static constexpr WORD_T sum   = WORD_T(1) << 18;  ///< Permit supervisor user memory access
     static constexpr WORD_T mxr   = WORD_T(1) << 19;  ///< Make executable pages readable
@@ -198,6 +185,7 @@ struct mstatus {
     static constexpr WORD_T tsr   = WORD_T(1) << 22;  ///< Trap SRET instruction
     static constexpr WORD_T sd    = WORD_T(1) << (sizeof(WORD_T) * CHAR_BIT - 1); ///< State dirty flag
 };
+
 
 /**
  * @brief mstatush register bit definitions (RV32 only)
@@ -212,12 +200,38 @@ struct mstatush {
  */
 template <>
 struct mstatus<uint64_t> {
-    static constexpr uint64_t uxl0 = uint64_t(1) << 32; ///< User XLEN low bit
-    static constexpr uint64_t uxl1 = uint64_t(1) << 33; ///< User XLEN high bit
-    static constexpr uint64_t sxl0 = uint64_t(1) << 34; ///< Supervisor XLEN low bit
-    static constexpr uint64_t sxl1 = uint64_t(1) << 35; ///< Supervisor XLEN high bit
+    static constexpr uint64_t uxl  = uint64_t(3) << 32; ///< User XLEN
+    static constexpr uint64_t uxll = uint64_t(1) << 32; ///< User XLEN low bit
+    static constexpr uint64_t uxlh = uint64_t(1) << 33; ///< User XLEN high bit
+    static constexpr uint64_t sxl  = uint64_t(3) << 34; ///< Supervisor XLEN
+    static constexpr uint64_t sxll = uint64_t(1) << 34; ///< Supervisor XLEN low bit
+    static constexpr uint64_t sxlh = uint64_t(1) << 35; ///< Supervisor XLEN high bit
     static constexpr uint64_t sbe  = uint64_t(1) << 36; ///< Supervisor endianness bit
     static constexpr uint64_t mbe  = uint64_t(1) << 37; ///< Machine endianness bit
+};
+
+/**
+ * @brief sstatus register bit definitions
+ * @tparam WORD_T Word type (uint32_t or uint64_t)
+ */
+template <typename WORD_T>
+struct sstatus {
+    static constexpr WORD_T sie   = WORD_T(1) << 1;   ///< Supervisor interrupt enable
+    static constexpr WORD_T spie  = WORD_T(1) << 5;   ///< Previous supervisor interrupt enable
+    static constexpr WORD_T ube   = WORD_T(1) << 6;   ///< User-mode endianness (1=big-endian)
+    static constexpr WORD_T spp   = WORD_T(1) << 8;   ///< Previous privilege mode (S=1, U=0)
+    static constexpr WORD_T vsl   = WORD_T(1) << 9;  ///< Vector unit status
+    static constexpr WORD_T vs    = WORD_T(3) << 10;  ///< Vector unit status
+    static constexpr WORD_T vsh   = WORD_T(1) << 10;  ///< Vector unit status
+    static constexpr WORD_T fs    = WORD_T(3) << 13;  ///< Floating-point unit status
+    static constexpr WORD_T fsl   = WORD_T(1) << 13;  ///< Floating-point unit status
+    static constexpr WORD_T fsh   = WORD_T(1) << 14;  ///< Floating-point unit status
+    static constexpr WORD_T xs    = WORD_T(3) << 15;  ///< Extension status
+    static constexpr WORD_T xsl   = WORD_T(1) << 15;  ///< Extension status
+    static constexpr WORD_T xsh   = WORD_T(1) << 16;  ///< Extension status
+    static constexpr WORD_T sum   = WORD_T(1) << 18;  ///< Permit supervisor user memory access
+    static constexpr WORD_T mxr   = WORD_T(1) << 19;  ///< Make executable pages readable
+    static constexpr WORD_T sd    = WORD_T(1) << (sizeof(WORD_T) * CHAR_BIT - 1); ///< State dirty flag
 };
 
 /**
@@ -228,6 +242,9 @@ template <typename WORD_T>
 struct mtvec {
     static constexpr WORD_T vectored = 1;  ///< Trap mode: vectored (1) or direct (0)
 };
+
+template <typename WORD_T>
+using stvec = mtvec<WORD_T>;
 
 /**
  * @brief mip register bit definitions
@@ -244,6 +261,9 @@ struct mip {
     static constexpr WORD_T lcofip = 1 << 13;  ///< Local counter overflow interrupt pending
 };
 
+template <typename WORD_T>
+using stip = mip<WORD_T>;
+
 /**
  * @brief mie register bit definitions
  * @tparam WORD_T Word type (uint32_t or uint64_t)
@@ -258,6 +278,9 @@ struct mie {
     static constexpr WORD_T meie   = 1 << 11;  ///< Machine external interrupt enable
     static constexpr WORD_T lcofie = 1 << 13;  ///< Local counter overflow interrupt enable
 };
+
+template <typename WORD_T>
+using stie = mie<WORD_T>;
 
 }
 

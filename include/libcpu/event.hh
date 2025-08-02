@@ -21,9 +21,9 @@ namespace libcpu {
  */
 enum class event_type_t {
     empty = 0,   ///< Empty event, used for internal purpose only
-    issue,       ///< Instruction issued - val1: instr_part1, val2: instr_part2
+    issue,       ///< Instruction issued - val1: instr_part1, val2: instr_part2 or zero
     reg_write,   ///< Register written - val1: rd_addr, val2: rd_data
-    load,        ///< Memory load - val1: addr, val2: zero extended data
+    load,        ///< Memory load - val1: addr, val2: zero extended data or zero
     store,       ///< Memory store - val1: addr, val2: zero extended data
     call,        ///< Function call - val1: target_addr, val2: stack_pointer
     call_ret,    ///< Function return - val1: target_addr, val2: stack_pointer
@@ -56,14 +56,31 @@ inline const char *event_type_to_str(event_type_t type) {
 /**
  * @struct event_t
  * @brief Template structure representing a CPU event
+ *
+ * `libanemo` does not enforce strict semantics for each field. The implementation treats
+ * `val1` and `val2` as generic values whose concrete meanings are context-dependent.
+ * This design choice maintains simplicity, flexibility, and performance,
+ * However, their interpretation must remain consistent across different implementations
+ * during differential testing.
+ *
+ * For example:
+ * - For `load` events:
+ *   - When representing a load attempt that might trap: `val2` must be zero
+ *   - When representing a successful load: `val2` must contain the zero-extended data
+ * - For `store` events:
+ *   - May represent either a store attempt or a successful store operation
+ *
+ * Certain library components may impose additional requirements. For example,
+ * some `io_dispatcher` subclasses requires `load` to represent only successful loads.
+ *
  * @tparam WORD_T The word type used for event values (typically uint32_t or uint64_t)
  */
 template <typename WORD_T>
 struct event_t {
     event_type_t type; ///< Type of the event
     WORD_T pc;         ///< Program counter associated with the event
-    WORD_T val1;       ///< First value (meaning depends on event type)
-    WORD_T val2;       ///< Second value (meaning depends on event type)
+    WORD_T val1;       ///< Event-specific primary value (interpretation depends on event type)
+    WORD_T val2;       ///< Event-specific secondary value (interpretation depends on event type)
 
     /**
      * @brief Equality comparison operator for event_t
