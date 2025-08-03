@@ -1,7 +1,7 @@
 #include <cstdint>
 #include <cassert>
 #include <libcpu/event.hh>
-#include <libcpu/rv64i_cpu_system.hh>
+#include <libcpu/riscv_cpu_system.hh>
 #include <libcpu/riscv_user_core.hh>
 #include <libcpu/riscv_privilege_module.hh>
 #include <libcpu/riscv.hh>
@@ -9,22 +9,29 @@
 
 namespace libcpu {
 
-uint8_t rv64i_cpu_system::n_gpr(void) const {
+template class riscv_cpu_system<uint32_t>;
+template class riscv_cpu_system<uint64_t>;
+
+template <typename WORD_T>
+uint8_t riscv_cpu_system<WORD_T>::n_gpr(void) const {
     return 32;
 }
 
-const char *rv64i_cpu_system::gpr_name(uint8_t addr) const {
+template <typename WORD_T>
+const char *riscv_cpu_system<WORD_T>::gpr_name(uint8_t addr) const {
     return riscv::gpr_name(addr);
 }
 
-uint8_t rv64i_cpu_system::gpr_addr(const char *name) const {
+template <typename WORD_T>
+uint8_t riscv_cpu_system<WORD_T>::gpr_addr(const char *name) const {
     return riscv::gpr_addr(name);
 }
 
-void rv64i_cpu_system::reset(word_t init_pc) {
-    privilege_module.instr_bus = instr_bus;
-    privilege_module.data_bus = data_bus;
-    privilege_module.mmio_bus = mmio_bus;
+template <typename WORD_T>
+void riscv_cpu_system<WORD_T>::reset(WORD_T init_pc) {
+    privilege_module.instr_bus = this->instr_bus;
+    privilege_module.data_bus = this->data_bus;
+    privilege_module.mmio_bus = this->mmio_bus;
     user_core.reset();
     privilege_module.reset();
     exec_result.pc = init_pc;
@@ -32,28 +39,34 @@ void rv64i_cpu_system::reset(word_t init_pc) {
     is_stopped = false;
 }
 
-uint64_t rv64i_cpu_system::get_pc(void) const {
+
+template <typename WORD_T>
+WORD_T riscv_cpu_system<WORD_T>::get_pc(void) const {
     return exec_result.pc;
 }
 
-const uint64_t *rv64i_cpu_system::get_gpr(void) const {
+template <typename WORD_T>
+const WORD_T *riscv_cpu_system<WORD_T>::get_gpr(void) const {
     return user_core.gpr;
 }
 
-uint64_t rv64i_cpu_system::get_gpr(uint8_t addr) const {
+template <typename WORD_T>
+WORD_T riscv_cpu_system<WORD_T>::get_gpr(uint8_t addr) const {
     return user_core.gpr[addr];
 }
 
-void rv64i_cpu_system::next_cycle(void) {
+template <typename WORD_T>
+void riscv_cpu_system<WORD_T>::next_cycle(void) {
     next_instruction();
 }
 
-void rv64i_cpu_system::next_instruction(void) {
+template <typename WORD_T>
+void riscv_cpu_system<WORD_T>::next_instruction(void) {
     privilege_module.paddr_fetch_instruction(exec_result);
 
     if (exec_result.type == exec_result_type_t::fetch) {
-        if (event_buffer!=nullptr) {
-            event_buffer->push_back({.type=event_type_t::issue, .pc=exec_result.pc, .val1=exec_result.instr, .val2=0});
+        if (this->event_buffer!=nullptr) {
+            this->event_buffer->push_back({.type=event_type_t::issue, .pc=exec_result.pc, .val1=exec_result.instr, .val2=0});
         }
         user_core.decode(exec_result);
     }
@@ -64,21 +77,21 @@ void rv64i_cpu_system::next_instruction(void) {
 
     // Do privileged operations
     if (exec_result.type == exec_result_type_t::load) {
-        if (event_buffer!=nullptr) {
+        if (this->event_buffer!=nullptr) {
             auto [addr, width, sign_extend, rd] = exec_result.load;
             privilege_module.paddr_load(exec_result);
             if (exec_result.type == exec_result_type_t::retire) {
-                event_buffer->push_back({.type=event_type_t::load, .pc=exec_result.pc, .val1=addr, .val2=libvio::zero_truncate(exec_result.retire.value, width)});
+                this->event_buffer->push_back({.type=event_type_t::load, .pc=exec_result.pc, .val1=addr, .val2=libvio::zero_truncate(exec_result.retire.value, width)});
             }
         } else {
             privilege_module.paddr_load(exec_result);
         }
     } else if (exec_result.type == exec_result_type_t::store) {
-        if (event_buffer!=nullptr) {
+        if (this->event_buffer!=nullptr) {
             auto [addr, width, data] = exec_result.store;
             privilege_module.paddr_store(exec_result);
             if (exec_result.type == exec_result_type_t::retire) {
-                event_buffer->push_back({.type=event_type_t::store, .pc=exec_result.pc, .val1=addr, .val2=libvio::zero_truncate(data, width)});
+                this->event_buffer->push_back({.type=event_type_t::store, .pc=exec_result.pc, .val1=addr, .val2=libvio::zero_truncate(data, width)});
             }
         } else {
             privilege_module.paddr_store(exec_result);
@@ -87,11 +100,11 @@ void rv64i_cpu_system::next_instruction(void) {
         privilege_module.csr_op(exec_result);
     } else if (exec_result.type == exec_result_type_t::sys_op) {
         privilege_module.sys_op(exec_result);
-        if (event_buffer!=nullptr && exec_result.type==exec_result_type_t::retire) {
+        if (this->event_buffer!=nullptr && exec_result.type==exec_result_type_t::retire) {
             if (exec_result.sys_op.mret) {
-                event_buffer->push_back({.type=event_type_t::trap_ret, .pc=exec_result.pc, .val1=privilege_module.mepc, .val2=0});
+                this->event_buffer->push_back({.type=event_type_t::trap_ret, .pc=exec_result.pc, .val1=privilege_module.mepc, .val2=0});
             } else if (exec_result.sys_op.sret) {
-                event_buffer->push_back({.type=event_type_t::trap_ret, .pc=exec_result.pc, .val1=privilege_module.sepc, .val2=0});
+                this->event_buffer->push_back({.type=event_type_t::trap_ret, .pc=exec_result.pc, .val1=privilege_module.sepc, .val2=0});
             }
         }
     }
@@ -101,8 +114,8 @@ void rv64i_cpu_system::next_instruction(void) {
             is_stopped = true;
             return;
         }
-        if (event_buffer != nullptr) {
-            event_buffer->push_back({.type=event_type_t::trap, .pc=exec_result.pc, .val1=exec_result.trap.cause, .val2=exec_result.trap.tval});
+        if (this->event_buffer != nullptr) {
+            this->event_buffer->push_back({.type=event_type_t::trap, .pc=exec_result.pc, .val1=exec_result.trap.cause, .val2=exec_result.trap.tval});
         }
         last_trap = exec_result.trap.cause;
         privilege_module.handle_exception(exec_result);
@@ -113,8 +126,8 @@ void rv64i_cpu_system::next_instruction(void) {
 
     assert(exec_result.type == exec_result_type_t::retire);
     if (exec_result.retire.rd!=0) {
-        if (event_buffer!=nullptr) {
-            event_buffer->push_back({.type=event_type_t::reg_write, .pc=exec_result.pc, .val1=exec_result.retire.rd, .val2=exec_result.retire.value});
+        if (this->event_buffer!=nullptr) {
+            this->event_buffer->push_back({.type=event_type_t::reg_write, .pc=exec_result.pc, .val1=exec_result.retire.rd, .val2=exec_result.retire.value});
         }
         user_core.gpr[exec_result.retire.rd] = exec_result.retire.value;
     }
@@ -125,16 +138,14 @@ void rv64i_cpu_system::next_instruction(void) {
     }
 }
 
-bool rv64i_cpu_system::stopped(void) const {
+template <typename WORD_T>
+bool riscv_cpu_system<WORD_T>::stopped(void) const {
     return is_stopped;
 }
 
-std::optional<uint64_t> rv64i_cpu_system::get_trap(void) const {
+template <typename WORD_T>
+std::optional<WORD_T> riscv_cpu_system<WORD_T>::get_trap(void) const {
     return last_trap;
-}
-
-std::optional<uint64_t> rv64i_cpu_system::pmem_peek(word_t addr, libvio::width_t width) const {
-    return data_bus->read(addr, width);
 }
 
 } // namespace libcpu

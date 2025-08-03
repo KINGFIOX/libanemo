@@ -6,7 +6,7 @@
 #include <limits>
 #include <libcpu/event.hh>
 #include <libcpu/memory.hh>
-#include <libcpu/memory_staging.hh>
+#include <libcpu/memory.hh>
 #include <libcpu/riscv.hh>
 #include <libvio/agent.hh>
 #include <libvio/bus.hh>

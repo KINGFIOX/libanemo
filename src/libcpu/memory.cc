@@ -1,15 +1,16 @@
 #include <cstddef>
 #include <cstdint>
-#include <libcpu/memory_staging.hh>
+#include <libcpu/memory.hh>
 #include <algorithm>
 #include <elf.h>
 #include <fstream>
+
 namespace libcpu {
 
-memory_staging::memory_staging(uint64_t mem_base, size_t mem_size)
+memory::memory(uint64_t mem_base, size_t mem_size)
     : base(mem_base), size(mem_size), mem(new uint8_t[mem_size]{}) {}
 
-std::optional<uint64_t> memory_staging::read(uint64_t addr, libvio::width_t width, bool little_endian) {
+std::optional<uint64_t> memory::read(uint64_t addr, libvio::width_t width, bool little_endian) {
     if (out_of_bound(addr, width)) {
         return {};
     }
@@ -30,7 +31,7 @@ std::optional<uint64_t> memory_staging::read(uint64_t addr, libvio::width_t widt
     return value;
 }
 
-bool memory_staging::write(uint64_t addr, libvio::width_t width, uint64_t value, bool little_endian) {
+bool memory::write(uint64_t addr, libvio::width_t width, uint64_t value, bool little_endian) {
     const size_t start_offset = addr - base;
     const size_t w = static_cast<size_t>(width);
     
@@ -50,30 +51,30 @@ bool memory_staging::write(uint64_t addr, libvio::width_t width, uint64_t value,
     return true;
 }
 
-uint8_t* memory_staging::host_addr(uint64_t addr) {
+uint8_t* memory::host_addr(uint64_t addr) {
     if (out_of_bound(addr, libvio::width_t::byte)) {
         return nullptr;
     }
     return mem.get() + (addr - base);
 }
 
-void memory_staging::save(const char* filename) const {
+void memory::save(const char* filename) const {
     std::ofstream out(filename, std::ios::binary);
     if (!out) return;
     save(out);
 }
 
-void memory_staging::save(std::ostream& out) const {
+void memory::save(std::ostream& out) const {
     out.write(reinterpret_cast<const char*>(mem.get()), size);
 }
 
-uint64_t memory_staging::restore(const char* filename) {
+uint64_t memory::restore(const char* filename) {
     std::ifstream in(filename, std::ios::binary);
     if (!in) return 0;
     return restore(in);
 }
 
-uint64_t memory_staging::restore(std::istream& in) {
+uint64_t memory::restore(std::istream& in) {
     in.seekg(0, std::ios::end);
     const size_t file_size = in.tellg();
     in.seekg(0);
@@ -113,7 +114,7 @@ static inline WORD_T load_elf_impl(uint8_t *dest, const uint8_t *src, size_t off
     return entry;   
 }
 
-uint64_t memory_staging::load_elf(const uint8_t* buffer) {
+uint64_t memory::load_elf(const uint8_t* buffer) {
     if (buffer[4] == ELFCLASS32) {
         return load_elf_impl<uint32_t, Elf32_Ehdr, Elf32_Phdr>(mem.get(), buffer, base);
     } else if (buffer[4] == ELFCLASS64) {
@@ -122,7 +123,7 @@ uint64_t memory_staging::load_elf(const uint8_t* buffer) {
     return 0;
 }
 
-uint64_t memory_staging::load_elf_from_file(const char* filename) {
+uint64_t memory::load_elf_from_file(const char* filename) {
     std::ifstream file(filename, std::ios::binary | std::ios::ate);
     const auto file_size = file.tellg();
     file.seekg(0);
@@ -131,11 +132,11 @@ uint64_t memory_staging::load_elf_from_file(const char* filename) {
     return load_elf(buffer.get());
 }
 
-uint64_t memory_staging::get_size() const {
+uint64_t memory::get_size() const {
     return size;
 }
 
-bool memory_staging::out_of_bound(uint64_t addr, libvio::width_t width) const {
+bool memory::out_of_bound(uint64_t addr, libvio::width_t width) const {
     const size_t up_addr = addr + static_cast<size_t>(width);
     return addr < base || up_addr > base + size;
 }

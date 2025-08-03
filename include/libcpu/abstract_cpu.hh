@@ -26,8 +26,8 @@ class abstract_cpu {
     public:
         using word_t = WORD_T;              ///< Type alias for the CPU word type
 
-        abstract_memory<WORD_T> *instr_bus = nullptr; // Pointer to the simulated instruction bus. Ignored if the subclass do not use a simulated memory.
-        abstract_memory<WORD_T> *data_bus = nullptr; // Pointer to the simulated data bus. Ignored if the subclass do not use a simulated memory.
+        memory *instr_bus = nullptr; // Pointer to the simulated instruction bus. Ignored if the subclass do not use a simulated memory.
+        memory *data_bus = nullptr; // Pointer to the simulated data bus. Ignored if the subclass do not use a simulated memory.
         libvio::io_agent *mmio_bus = nullptr; ///< The virtual MMIO bus. If nullptr, MMIO is disabled. Ignored on user-space emulators.
 
         libvio::ringbuffer<event_t<WORD_T>> *event_buffer = nullptr;  ///< Buffer for storing CPU events. If nullptr, event tracing is off.
@@ -146,7 +146,9 @@ class abstract_cpu {
          * @note This function will not read from a MMIO address. It tiggers no side-effect like caching neither.
          *      If a MMIO address is provided, `nullopt` is returned.
          */
-        virtual std::optional<WORD_T> pmem_peek(WORD_T addr, libvio::width_t width) const = 0;
+        virtual std::optional<WORD_T> pmem_peek(WORD_T addr, libvio::width_t width) const {
+            return data_bus->read(addr, width);
+        }
 
         /**
          * @brief Whether the execution has ended.
