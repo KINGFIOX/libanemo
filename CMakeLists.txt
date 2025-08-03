@@ -14,5 +14,5 @@ file(GLOB_RECURSE "LIBSDB_SRCS" "src/libsdb/*.cc")
 add_library(anemo STATIC "${LIBCPU_SRCS}" "${LIBVIO_SRCS}" "${LIBSDB_SRCS}")
 set_target_properties(anemo PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-add_executable(example src/main.cc)
-target_link_libraries(example PRIVATE anemo)
+add_executable(quick_start src/examples/quick_start.cc)
+target_link_libraries(quick_start PRIVATE anemo)

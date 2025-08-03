@@ -4,13 +4,7 @@
 #include <cassert>
 #include <cstdint>
 #include <limits>
-#include <libcpu/event.hh>
-#include <libcpu/memory.hh>
-#include <libcpu/memory.hh>
-#include <libcpu/riscv.hh>
-#include <libvio/agent.hh>
-#include <libvio/bus.hh>
-#include <libvio/ringbuffer.hh>
+#include <libcpu/riscv/riscv.hh>
 #include <libvio/width.hh>
 #include <type_traits>
 

@@ -6,9 +6,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <libcpu/memory.hh>
-#include <libcpu/memory.hh>
-#include <libcpu/riscv.hh>
-#include <libcpu/riscv_user_core.hh>
+#include <libcpu/riscv/riscv.hh>
+#include <libcpu/riscv/user_core.hh>
 #include <libvio/bus.hh>
 #include <optional>
 
