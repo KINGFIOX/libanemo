@@ -16,3 +16,5 @@ set_target_properties(anemo PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 add_executable(quick_start src/examples/quick_start.cc)
 target_link_libraries(quick_start PRIVATE anemo)
+add_executable(riscv_minimal src/examples/riscv_minimal.cc)
+target_link_libraries(riscv_minimal PRIVATE anemo)
