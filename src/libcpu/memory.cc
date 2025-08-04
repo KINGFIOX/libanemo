@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <elf.h>
 #include <fstream>
+#include <libvio/width.hh>
 
 namespace libcpu {
 
@@ -100,11 +101,8 @@ static inline WORD_T load_elf_impl(uint8_t *dest, const uint8_t *src, size_t off
         // if one of p_paddr and p_vaddr is zero, use the non-zero one
         // if both are non-zero but different, the behavior is undefined
         uint8_t *target_addr = dest + (segment_headers[i].p_vaddr | segment_headers[i].p_paddr) - offset;
-        if (target_addr == nullptr) {
-            continue;
-        }
         // load the content
-        const uint8_t *seg_content = src + segment_headers[i].p_offset;
+        const uint8_t *seg_content = src + seg_base;
         std::copy(seg_content, seg_content+file_size, target_addr);
         // fill the remaining part with zero
         if (seg_size > file_size) {

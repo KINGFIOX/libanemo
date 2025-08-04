@@ -11,7 +11,7 @@
 #include <libvio/bus.hh>
 #include <optional>
 
-namespace libcpu {
+namespace libcpu::riscv {
 
 /**
  * @brief RISC-V Privilege Module
@@ -34,14 +34,13 @@ namespace libcpu {
  * @see riscv_user_core for the unprivileged counterpart
  */
 template <typename WORD_T>
-class riscv_privilege_module {
+class privilege_module {
     public:
-        using priv_level_t = riscv::priv_level_t;
-        using exec_result_t = riscv_user_core<WORD_T>::exec_result_t;
-        using exec_result_type_t = riscv_user_core<WORD_T>::exec_result_type_t;
-        using satp_mode_t = enum class satp_mode_t: uint8_t {
-            bare=0, sv32=1, sv39=8, sv48=9, sv57=10, sv64=11
-        };
+        using dispatch_t  = riscv::dispatch_t;
+        using decode_t = riscv::decode_t;
+        using exec_result_type_t = riscv::exec_result_type_t;
+        using exec_result_t = riscv::exec_result_t<WORD_T>;
+        using satp_mode_t = riscv::satp_mode_t;
 
         priv_level_t priv_level;
         WORD_T mepc, mtvec, mcause, mtval, mscratch, mie, mip, medeleg, mideleg;
@@ -195,7 +194,7 @@ class riscv_privilege_module {
 };
 
 template <typename WORD_T>
-void riscv_privilege_module<WORD_T>::reset(void) {
+void privilege_module<WORD_T>::reset(void) {
     priv_level = priv_level_t::m;
     mepc = 0; sepc = 0;
     mtvec = 0; stvec = 0;
@@ -217,7 +216,7 @@ void riscv_privilege_module<WORD_T>::reset(void) {
 }
 
 template <typename WORD_T>
-std::optional<uint64_t> riscv_privilege_module<WORD_T>::vaddr_to_paddr(WORD_T vaddr) const {
+std::optional<uint64_t> privilege_module<WORD_T>::vaddr_to_paddr(WORD_T vaddr) const {
     if (priv_level == priv_level_t::m) {
         return vaddr;
     } else if (priv_level == priv_level_t::s) {
@@ -228,7 +227,7 @@ std::optional<uint64_t> riscv_privilege_module<WORD_T>::vaddr_to_paddr(WORD_T va
 }
 
 template <typename WORD_T>
-void riscv_privilege_module<WORD_T>::paddr_fetch_instruction(exec_result_t &op) const {
+void privilege_module<WORD_T>::paddr_fetch_instruction(exec_result_t &op) const {
     WORD_T paddr = op.pc;
     std::optional<uint32_t> instr_opt = instr_bus->read(paddr, libvio::width_t::word);
     if (instr_opt.has_value()) {
@@ -244,7 +243,7 @@ void riscv_privilege_module<WORD_T>::paddr_fetch_instruction(exec_result_t &op) 
 }
 
 template <typename WORD_T>
-void riscv_privilege_module<WORD_T>::vaddr_fetch_instruction(exec_result_t &op) const {
+void privilege_module<WORD_T>::vaddr_fetch_instruction(exec_result_t &op) const {
     WORD_T vaddr = op.pc;
     std::optional<WORD_T> paddr_opt = vaddr_to_paddr(op.load.addr);
     if (paddr_opt.has_value()) {
@@ -270,7 +269,7 @@ void riscv_privilege_module<WORD_T>::vaddr_fetch_instruction(exec_result_t &op) 
 }
 
 template <typename WORD_T>
-void riscv_privilege_module<WORD_T>::paddr_load(exec_result_t &op) {
+void privilege_module<WORD_T>::paddr_load(exec_result_t &op) {
     assert(op.type == exec_result_type_t::load);
     auto [paddr, width, sign_extend, rd] = op.load;
     std::optional<uint64_t> data_opt = data_bus->read(paddr, width);
@@ -298,7 +297,7 @@ void riscv_privilege_module<WORD_T>::paddr_load(exec_result_t &op) {
 }
 
 template <typename WORD_T>
-void riscv_privilege_module<WORD_T>::paddr_store(exec_result_t &op) {
+void privilege_module<WORD_T>::paddr_store(exec_result_t &op) {
     assert(op.type == exec_result_type_t::store);
     auto [paddr, width, data] = op.store;
     bool success = data_bus->write(paddr, width, data);
@@ -322,7 +321,7 @@ void riscv_privilege_module<WORD_T>::paddr_store(exec_result_t &op) {
 }
 
 template <typename WORD_T>
-void riscv_privilege_module<WORD_T>::vaddr_load(exec_result_t &op) {
+void privilege_module<WORD_T>::vaddr_load(exec_result_t &op) {
     assert(op.type == exec_result_type_t::load);
     auto [vaddr, width, sign_extend, rd] = op.load;
     std::optional<uint64_t> paddr_opt = vaddr_to_paddr(op.load.addr);
@@ -360,7 +359,7 @@ void riscv_privilege_module<WORD_T>::vaddr_load(exec_result_t &op) {
 }
 
 template <typename WORD_T>
-void riscv_privilege_module<WORD_T>::vaddr_store(exec_result_t &op) {
+void privilege_module<WORD_T>::vaddr_store(exec_result_t &op) {
     assert(op.type == exec_result_type_t::store);
     auto [vaddr, width, data] = op.store;
     std::optional<uint64_t> paddr_opt = vaddr_to_paddr(vaddr);
@@ -394,7 +393,7 @@ void riscv_privilege_module<WORD_T>::vaddr_store(exec_result_t &op) {
 }
 
 template <typename WORD_T>
-void riscv_privilege_module<WORD_T>::raise_interrupt(WORD_T cause) {
+void privilege_module<WORD_T>::raise_interrupt(WORD_T cause) {
     WORD_T cause_mask = 1 << (cause & ~riscv::mcause<WORD_T>::intr_mask);
     if (mideleg & cause_mask) {
         sip |= cause_mask;
@@ -404,7 +403,7 @@ void riscv_privilege_module<WORD_T>::raise_interrupt(WORD_T cause) {
 }
 
 template <typename WORD_T>
-void riscv_privilege_module<WORD_T>::handle_interrupt(exec_result_t &op) {
+void privilege_module<WORD_T>::handle_interrupt(exec_result_t &op) {
     constexpr size_t word_size = sizeof(WORD_T) * CHAR_BIT;
 
     assert(op.type == exec_result_type_t::retire);
@@ -470,7 +469,7 @@ void riscv_privilege_module<WORD_T>::handle_interrupt(exec_result_t &op) {
 }
 
 template <typename WORD_T>
-void riscv_privilege_module<WORD_T>::handle_exception(exec_result_t &op) {
+void privilege_module<WORD_T>::handle_exception(exec_result_t &op) {
     assert(op.type == exec_result_type_t::trap);
     WORD_T pc = op.pc;
     WORD_T cause = op.trap.cause;
@@ -540,7 +539,7 @@ void riscv_privilege_module<WORD_T>::handle_exception(exec_result_t &op) {
     }
 
 template <typename WORD_T>
-void riscv_privilege_module<WORD_T>::csr_op(exec_result_t &op) {
+void privilege_module<WORD_T>::csr_op(exec_result_t &op) {
     constexpr bool is_rv64 = sizeof(WORD_T) * CHAR_BIT == 64;
     assert(op.type == exec_result_type_t::csr_op);
 
@@ -619,7 +618,7 @@ void riscv_privilege_module<WORD_T>::csr_op(exec_result_t &op) {
 #undef STATUSRCS
 
 template <typename WORD_T>
-void riscv_privilege_module<WORD_T>::sys_op(exec_result_t &op) {
+void privilege_module<WORD_T>::sys_op(exec_result_t &op) {
     assert(op.type == exec_result_type_t::sys_op);
     if (op.sys_op.ecall) {
         op.type = exec_result_type_t::trap;

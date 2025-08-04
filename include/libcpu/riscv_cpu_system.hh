@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <libcpu/abstract_cpu.hh>
+#include <libcpu/riscv/riscv.hh>
 #include <libcpu/riscv/user_core.hh>
 #include <libcpu/riscv/privilege_module.hh>
 
@@ -11,9 +12,10 @@ namespace libcpu {
 template <typename WORD_T>
 class riscv_cpu_system: public abstract_cpu<WORD_T> {
     public:
-        using dispatch_t  = riscv_user_core<WORD_T>::dispatch_t;
-        using exec_result_type_t = riscv_user_core<WORD_T>::exec_result_type_t;
-        using exec_result_t = riscv_user_core<WORD_T>::exec_result_t;
+        using dispatch_t  = riscv::dispatch_t;
+        using decode_t = riscv::decode_t;
+        using exec_result_type_t = riscv::exec_result_type_t;
+        using exec_result_t = riscv::exec_result_t<WORD_T>;
 
         virtual uint8_t n_gpr(void) const override;
         virtual const char *gpr_name(uint8_t addr) const override;
@@ -29,8 +31,8 @@ class riscv_cpu_system: public abstract_cpu<WORD_T> {
 
     private:
         exec_result_t exec_result;
-        riscv_user_core<WORD_T> user_core;
-        riscv_privilege_module<WORD_T> privilege_module;
+        riscv::user_core<WORD_T> user_core;
+        riscv::privilege_module<WORD_T> privilege_module;
         std::optional<WORD_T> last_trap;
         bool is_stopped;
 };
@@ -91,7 +93,7 @@ void riscv_cpu_system<WORD_T>::next_instruction(void) {
         if (this->event_buffer!=nullptr) {
             this->event_buffer->push_back({.type=event_type_t::issue, .pc=exec_result.pc, .val1=exec_result.instr, .val2=0});
         }
-        user_core.decode(exec_result);
+        riscv::user_core<WORD_T>::decode(exec_result);
     }
 
     if (exec_result.type == exec_result_type_t::decode) {
@@ -133,7 +135,7 @@ void riscv_cpu_system<WORD_T>::next_instruction(void) {
     }
 
     if (exec_result.type == exec_result_type_t::trap) {
-        if (exec_result.trap.cause == riscv::mcause<uint32_t>::except_breakpoint) {
+        if (exec_result.trap.cause == riscv::mcause<WORD_T>::except_breakpoint) {
             is_stopped = true;
             return;
         }

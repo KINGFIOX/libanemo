@@ -8,7 +8,7 @@
 #include <libvio/width.hh>
 #include <type_traits>
 
-namespace libcpu {
+namespace libcpu::riscv {
 
 /**
  * @brief RISC-V User Mode Core Template Class
@@ -19,93 +19,15 @@ namespace libcpu {
  * It supports the base integer instruction set (RV32I/RV64I) along with some additional extensions.
  */
 template <typename WORD_T>
-class riscv_user_core {
+class user_core {
     public:
+        using dispatch_t  = riscv::dispatch_t;
+        using decode_t = riscv::decode_t;
+        using exec_result_type_t = riscv::exec_result_type_t;
+        using exec_result_t = riscv::exec_result_t<WORD_T>;
+
         WORD_T gpr[32]; ///< General purpose registers (x0-x31)
         
-        /**
-         * @brief Enumeration of dispatchable instruction types
-         */
-        using dispatch_t = enum class dispatch_t {
-            // Arithmetic & Logical
-            add, sub, sll, slt, sltu, xor_, srl, sra, or_, and_,
-            // Immediate Operations
-            addi, slti, sltiu, xori, ori, andi, slli, srli, srai,
-            // Memory Operations
-            lb, lh, lw, lbu, lhu, sb, sh, sw,
-            // Control Flow
-            jal, jalr, beq, bne, blt, bge, bltu, bgeu,
-            // Upper Immediate
-            lui, auipc,
-            // Multiply/Divide
-            mul, mulh, mulhsu, mulhu, div, divu, rem, remu,
-            // System
-            ecall, ebreak, mret, sret,
-            // RV64 specific instructions
-            lwu, ld, sd, addiw, slliw, srliw, sraiw, addw, subw, sllw, srlw, sraw, mulw, divw, divuw, remw, remuw,
-            // CSR functions
-            csrrw, csrrs, csrrc, csrrwi, csrrsi, csrrci,
-        };
-
-        /**
-         * @brief Execution result types
-         */
-        using exec_result_type_t = enum class exec_result_type_t {
-            fetch, decode,
-            retire, ///< Committed or trap handled
-            load, store,
-            trap, sys_op, csr_op
-        };
-
-        /**
-         * @brief Execution result structure
-         *
-         * Describes modifications to unprivileged architectural state or operation details
-         * for privileged operations. The user core handles only unprivileged operations;
-         * privileged operations must be implemented by dedicated modules.
-         *
-         * Note: Memory operations are inherently privileged as they may involve address
-         * translation and physical memory protection. For flexibility, these operations
-         * should be implemented by separate modules. The user core is not responsible
-         * for handling MMIO, address translation, or similar memory-related functions.
-         *
-         * Modifications to privileged architectural state must be implemented by the
-         * privileged module. This clear separation between privileged and unprivileged
-         * components improves performance and enables code reuse.
-         */
-        using exec_result_t = struct exec_result_t {
-            exec_result_type_t type; ///< Type of execution result
-            WORD_T pc;      ///< PC of this instruction
-            WORD_T next_pc; ///< Expected PC of the next instruction
-            uint32_t instr;
-            union { 
-                struct {
-                    dispatch_t dispatch;
-                    WORD_T imm;
-                    uint8_t rs1; uint8_t rs2; uint8_t rd;
-                } decode;
-                struct {
-                    uint8_t rd; WORD_T value;
-                } retire;
-                struct {
-                    WORD_T addr; libvio::width_t width; bool sign_extend; uint8_t rd;
-                } load;
-                struct {
-                    WORD_T addr; libvio::width_t width; WORD_T data;
-                } store;
-                struct {
-                    WORD_T cause; WORD_T tval;
-                } trap;
-                struct {
-                    bool ecall; bool mret; bool sret;
-                } sys_op;
-                struct {
-                    uint16_t addr; uint8_t rd;
-                    bool read; bool write; bool set; bool clear; WORD_T value;
-                } csr_op;
-            };
-        };
-
         /**
          * @brief Reset the state of the user core
          * 
@@ -113,12 +35,12 @@ class riscv_user_core {
          */
         void reset(void);
 
-        void decode(exec_result_t &op) const;
+        static void decode(exec_result_t &op);
         void execute(exec_result_t &op);
 };
 
 template <typename WORD_T>
-void riscv_user_core<WORD_T>::reset(void) {
+void user_core<WORD_T>::reset(void) {
     for (auto &i: gpr) {
         i = 0;
     }
@@ -131,31 +53,31 @@ void riscv_user_core<WORD_T>::reset(void) {
 #define rd_r(instr)  (((instr) >> 7)  & 0x1F)
 
 // I-type
-#define imm_i(WORD_T, instr) ((std::make_signed_t<WORD_T>(int32_t(instr))) >> 20)
+#define imm_i(WORD_T, instr) ((int32_t(instr)) >> 20)
 #define rs1_i(instr) (((instr) >> 15) & 0x1F)
 #define rs2_i(instr) (0)
 #define rd_i(instr)  (((instr) >> 7)  & 0x1F)
 
 // S-type
-#define imm_s(WORD_T, instr) ((std::make_signed_t<WORD_T>(int32_t((instr) & 0xfe000000) >> 20)) | (((instr) >> 7) & 0x1f))
+#define imm_s(WORD_T, instr) ((int32_t((instr) & 0xfe000000) >> 20) | (((instr) >> 7) & 0x1f))
 #define rs1_s(instr) (((instr) >> 15) & 0x1F)
 #define rs2_s(instr) (((instr) >> 20) & 0x1F)
 #define rd_s(instr)  (0)
 
 // B-type
-#define imm_b(WORD_T, instr) ((std::make_signed_t<WORD_T>(int32_t((instr) & 0x80000000) >> 19)) | (((instr) & 0x80) << 4) | (((instr) >> 20) & 0x7e0) | (((instr) >> 7) & 0x1e))
+#define imm_b(WORD_T, instr) ((int32_t((instr) & 0x80000000) >> 19) | (((instr) & 0x80) << 4) | (((instr) >> 20) & 0x7e0) | (((instr) >> 7) & 0x1e))
 #define rs1_b(instr) (((instr) >> 15) & 0x1F)
 #define rs2_b(instr) (((instr) >> 20) & 0x1F)
 #define rd_b(instr)  (0)
 
 // U-type
-#define imm_u(WORD_T, instr) (std::make_signed_t<WORD_T>(int32_t((instr)&0xfffff000)))
+#define imm_u(WORD_T, instr) (int32_t((instr)&0xfffff000))
 #define rs1_u(instr) (0)
 #define rs2_u(instr) (0)
 #define rd_u(instr)  (((instr) >> 7)  & 0x1F)
 
 // J-type
-#define imm_j(WORD_T, instr) ((std::make_signed_t<WORD_T>(int32_t((instr) & 0x80000000)) >> 11) | ((instr) & 0xff000) | (((instr) >> 9) & 0x800) | (((instr) >> 20) & 0x7fe))
+#define imm_j(WORD_T, instr) ((int32_t((instr) & 0x80000000) >> 11) | ((instr) & 0xff000) | (((instr) >> 9) & 0x800) | (((instr) >> 20) & 0x7fe))
 #define rs1_j(instr) (0)
 #define rs2_j(instr) (0)
 #define rd_j(instr)  (((instr) >> 7)  & 0x1F)
@@ -170,8 +92,14 @@ void riscv_user_core<WORD_T>::reset(void) {
         op.decode.rd  = rd_##encoding(instr);\
     } else
 
+#define RISCV_INSTR_PAT_END \
+    { \
+        op.type = exec_result_type_t::decode; \
+        op.decode.dispatch = dispatch_t::invalid; \
+    }
+
 template <typename WORD_T>
-void riscv_user_core<WORD_T>::decode(exec_result_t &op) const {
+void user_core<WORD_T>::decode(exec_result_t &op) {
     assert(op.type == exec_result_type_t::fetch);
     WORD_T instr = op.instr;
 
@@ -270,9 +198,7 @@ void riscv_user_core<WORD_T>::decode(exec_result_t &op) const {
     RISCV_INSTR_PAT(0b00000010000000000101000000111011, 0b11111110000000000111000001111111, r, divuw)
     RISCV_INSTR_PAT(0b00000010000000000110000000111011, 0b11111110000000000111000001111111, r, remw)
     RISCV_INSTR_PAT(0b00000010000000000111000000111011, 0b11111110000000000111000001111111, r, remuw)
-
-    // Fallback case for invalid instructions
-    { op = {.type=exec_result_type_t::trap, .trap={.cause=riscv::mcause<WORD_T>::except_illegal_instr, .tval=instr}}; }
+    RISCV_INSTR_PAT_END
 }
 
 // R-type
@@ -312,6 +238,7 @@ void riscv_user_core<WORD_T>::decode(exec_result_t &op) const {
 #undef rd_j
 
 #undef RISCV_INSTR_PAT
+#undef RISCV_INSTR_PAT_END
 
 #define invalid_instruction() \
     op.type = exec_result_type_t::trap; \
@@ -319,11 +246,11 @@ void riscv_user_core<WORD_T>::decode(exec_result_t &op) const {
     op.trap.tval = op.instr;
 
 template <typename WORD_T>
-void riscv_user_core<WORD_T>::execute(exec_result_t &op) {
+void user_core<WORD_T>::execute(exec_result_t &op) {
     constexpr bool is_rv64 = sizeof(WORD_T) * CHAR_BIT == 64;
     assert(op.type == exec_result_type_t::decode);
 
-    auto [dispatch, imm, rs1, rs2, rd] = op.decode;
+    auto [imm, dispatch, rs1, rs2, rd] = op.decode;
     op.type = exec_result_type_t::retire;
     op.next_pc = (op.instr&3)==3 ? op.pc+4 : op.pc+2;
     op.retire.rd = rd;
@@ -904,6 +831,11 @@ void riscv_user_core<WORD_T>::execute(exec_result_t &op) {
             } else {
                 invalid_instruction();
             }
+            break;
+        }
+
+        default: {
+            invalid_instruction();
             break;
         }
     }

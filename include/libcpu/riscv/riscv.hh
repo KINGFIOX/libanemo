@@ -1,14 +1,15 @@
-#ifndef LIBCPU_RISCV_HH
-#define LIBCPU_RISCV_HH
+#ifndef LIBCPU_RISCV_RISCV_HH
+#define LIBCPU_RISCV_RISCV_HH
 
 #include <climits>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <libvio/width.hh>
 
 namespace libcpu::riscv {
 
-enum class priv_level_t {
+enum class priv_level_t: uint8_t {
     u = 0,
     s = 1,
     h = 2,
@@ -282,6 +283,104 @@ struct mie {
 
 template <typename WORD_T>
 using stie = mie<WORD_T>;
+
+/**
+ * @brief Enumeration of dispatchable instruction types
+ */
+enum class dispatch_t: uint8_t {
+    // Arithmetic & Logical
+    add, sub, sll, slt, sltu, xor_, srl, sra, or_, and_,
+    // Immediate Operations
+    addi, slti, sltiu, xori, ori, andi, slli, srli, srai,
+    // Memory Operations
+    lb, lh, lw, lbu, lhu, sb, sh, sw,
+    // Control Flow
+    jal, jalr, beq, bne, blt, bge, bltu, bgeu,
+    // Upper Immediate
+    lui, auipc,
+    // Multiply/Divide
+    mul, mulh, mulhsu, mulhu, div, divu, rem, remu,
+    // System
+    ecall, ebreak, mret, sret,
+    // RV64 specific instructions
+    lwu, ld, sd, addiw, slliw, srliw, sraiw, addw, subw, sllw, srlw, sraw, mulw, divw, divuw, remw, remuw,
+    // CSR functions
+    csrrw, csrrs, csrrc, csrrwi, csrrsi, csrrci,
+    // Invalid instruction
+    invalid,
+};
+
+/**
+ * @brief Execution result types
+ */
+enum class exec_result_type_t: uint8_t {
+    fetch, decode,
+    retire, ///< Committed or trap handled
+    load, store,
+    trap, sys_op, csr_op
+};
+
+/**
+ * @brief A decoded RISC-V instruction
+ */
+struct decode_t {
+    int32_t imm;
+    dispatch_t dispatch;
+    uint8_t rs1; uint8_t rs2; uint8_t rd;
+};
+
+template <typename WORD_T>
+/**
+ * @brief Execution result structure
+ *
+ * Describes modifications to unprivileged architectural state or operation details
+ * for privileged operations. The user core handles only unprivileged operations;
+ * privileged operations must be implemented by dedicated modules.
+ *
+ * Note: Memory operations are inherently privileged as they may involve address
+ * translation and physical memory protection. For flexibility, these operations
+ * should be implemented by separate modules. The user core is not responsible
+ * for handling MMIO, address translation, or similar memory-related functions.
+ *
+ * Modifications to privileged architectural state must be implemented by the
+ * privileged module. This clear separation between privileged and unprivileged
+ * components improves performance and enables code reuse.
+ */
+struct exec_result_t {
+    exec_result_type_t type; ///< Type of execution result
+    WORD_T pc;      ///< PC of this instruction
+    WORD_T next_pc; ///< Expected PC of the next instruction
+    uint32_t instr;
+    union {
+        decode_t decode;
+        struct {
+            uint8_t rd; WORD_T value;
+        } retire;
+        struct {
+            WORD_T addr; libvio::width_t width; bool sign_extend; uint8_t rd;
+        } load;
+        struct {
+            WORD_T addr; libvio::width_t width; WORD_T data;
+        } store;
+        struct {
+            WORD_T cause; WORD_T tval;
+        } trap;
+        struct {
+            bool ecall; bool mret; bool sret;
+        } sys_op;
+        struct {
+            uint16_t addr; uint8_t rd;
+            bool read; bool write; bool set; bool clear; WORD_T value;
+        } csr_op;
+    };
+};
+
+/**
+ * @brief RISC-V address translation modes.
+ */
+enum class satp_mode_t: uint8_t {
+    bare=0, sv32=1, sv39=8, sv48=9, sv57=10, sv64=11
+};
 
 }
 

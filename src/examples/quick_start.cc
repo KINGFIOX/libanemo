@@ -1,3 +1,8 @@
+/**
+ * @file An example of the core functionalities of this library. This file
+ * assumes the same memory layout with NEMU. It is compatible with binaries
+ * compiled for `riscv32-nemu`.
+ */
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -12,7 +17,7 @@
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::cerr << "Usage: nemu-minimal <binary_file>\n";
+        std::cerr << "Usage: " << argv[0] << " <elf_file> [sdb_command]...\n";
         return 1;
     }
 
