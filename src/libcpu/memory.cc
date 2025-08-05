@@ -5,13 +5,26 @@
 #include <elf.h>
 #include <fstream>
 #include <libvio/width.hh>
+#include <memory>
 
 namespace libcpu {
 
-memory::memory(uint64_t mem_base, size_t mem_size)
-    : base(mem_base), size(mem_size), mem(new uint8_t[mem_size]{}) {}
+memory_view::memory_view(const memory_view &mem, uint64_t view_base, uint64_t view_size) {
+    mem_ptr = mem.mem_ptr;
+    base = view_base;
+    size = view_size;
+}
 
-std::optional<uint64_t> memory::read(uint64_t addr, libvio::width_t width, bool little_endian) {
+memory_view::memory_view() {}
+
+memory::memory(uint64_t mem_base, size_t mem_size) {
+    mem = std::unique_ptr<uint8_t[]>{new uint8_t[mem_size]};
+    mem_ptr = mem.get();
+    base = mem_base;
+    size = mem_size;
+}
+
+std::optional<uint64_t> memory_view::read(uint64_t addr, libvio::width_t width, bool little_endian) {
     if (out_of_bound(addr, width)) {
         return {};
     }
@@ -22,17 +35,17 @@ std::optional<uint64_t> memory::read(uint64_t addr, libvio::width_t width, bool 
     uint64_t value = 0;
     if (little_endian) {
         for (size_t i = 0; i < w; i++) {
-            value |= static_cast<uint64_t>(mem[start_offset + i]) << (i * 8);
+            value |= static_cast<uint64_t>(mem_ptr[start_offset + i]) << (i * 8);
         }
     } else {
         for (size_t i = 0; i < w; i++) {
-            value = (value << 8) | mem[start_offset + i];
+            value = (value << 8) | mem_ptr[start_offset + i];
         }
     }
     return value;
 }
 
-bool memory::write(uint64_t addr, libvio::width_t width, uint64_t value, bool little_endian) {
+bool memory_view::write(uint64_t addr, libvio::width_t width, uint64_t value, bool little_endian) {
     const size_t start_offset = addr - base;
     const size_t w = static_cast<size_t>(width);
     
@@ -42,45 +55,45 @@ bool memory::write(uint64_t addr, libvio::width_t width, uint64_t value, bool li
 
     if (little_endian) {
         for (size_t i = 0; i < w; i++) {
-            mem[start_offset + i] = (value >> (i * 8)) & 0xFF;
+            mem_ptr[start_offset + i] = (value >> (i * 8)) & 0xFF;
         }
     } else {
         for (size_t i = 0; i < w; i++) {
-            mem[start_offset + i] = (value >> ((w - 1 - i) * 8)) & 0xFF;
+            mem_ptr[start_offset + i] = (value >> ((w - 1 - i) * 8)) & 0xFF;
         }
     }
     return true;
 }
 
-uint8_t* memory::host_addr(uint64_t addr) {
+uint8_t* memory_view::host_addr(uint64_t addr) {
     if (out_of_bound(addr, libvio::width_t::byte)) {
         return nullptr;
     }
-    return mem.get() + (addr - base);
+    return mem_ptr + (addr - base);
 }
 
-void memory::save(const char* filename) const {
+void memory_view::save(const char* filename) const {
     std::ofstream out(filename, std::ios::binary);
     if (!out) return;
     save(out);
 }
 
-void memory::save(std::ostream& out) const {
-    out.write(reinterpret_cast<const char*>(mem.get()), size);
+void memory_view::save(std::ostream& out) const {
+    out.write(reinterpret_cast<const char*>(mem_ptr), size);
 }
 
-uint64_t memory::restore(const char* filename) {
+uint64_t memory_view::restore(const char* filename) {
     std::ifstream in(filename, std::ios::binary);
     if (!in) return 0;
     return restore(in);
 }
 
-uint64_t memory::restore(std::istream& in) {
+uint64_t memory_view::restore(std::istream& in) {
     in.seekg(0, std::ios::end);
     const size_t file_size = in.tellg();
     in.seekg(0);
     const size_t bytes_to_read = std::min(file_size, static_cast<size_t>(size));
-    in.read(reinterpret_cast<char*>(mem.get()), bytes_to_read);
+    in.read(reinterpret_cast<char*>(mem_ptr), bytes_to_read);
     return bytes_to_read;
 }
 
@@ -112,16 +125,16 @@ static inline WORD_T load_elf_impl(uint8_t *dest, const uint8_t *src, size_t off
     return entry;   
 }
 
-uint64_t memory::load_elf(const uint8_t* buffer) {
+uint64_t memory_view::load_elf(const uint8_t* buffer) {
     if (buffer[4] == ELFCLASS32) {
-        return load_elf_impl<uint32_t, Elf32_Ehdr, Elf32_Phdr>(mem.get(), buffer, base);
+        return load_elf_impl<uint32_t, Elf32_Ehdr, Elf32_Phdr>(mem_ptr, buffer, base);
     } else if (buffer[4] == ELFCLASS64) {
-        return load_elf_impl<uint64_t, Elf64_Ehdr, Elf64_Phdr>(mem.get(), buffer, base);
+        return load_elf_impl<uint64_t, Elf64_Ehdr, Elf64_Phdr>(mem_ptr, buffer, base);
     }
     return 0;
 }
 
-uint64_t memory::load_elf_from_file(const char* filename) {
+uint64_t memory_view::load_elf_from_file(const char* filename) {
     std::ifstream file(filename, std::ios::binary | std::ios::ate);
     const auto file_size = file.tellg();
     file.seekg(0);
@@ -130,11 +143,11 @@ uint64_t memory::load_elf_from_file(const char* filename) {
     return load_elf(buffer.get());
 }
 
-uint64_t memory::get_size() const {
+uint64_t memory_view::get_size() const {
     return size;
 }
 
-bool memory::out_of_bound(uint64_t addr, libvio::width_t width) const {
+bool memory_view::out_of_bound(uint64_t addr, libvio::width_t width) const {
     const size_t up_addr = addr + static_cast<size_t>(width);
     return addr < base || up_addr > base + size;
 }

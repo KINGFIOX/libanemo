@@ -12,109 +12,144 @@
 namespace libcpu {
 
 /**
- * @brief Concrete memory implementation using contiguous storage.
- * 
- * This class provides memory operations with 64-bit addressing. All methods
- * are non-virtual for performance reasons. The memory region is contiguous.
+ * @brief Abstract base class representing a view into memory.
+ *
+ * Provides read/write operations and memory management utilities for a specific
+ * memory region. Derived classes implement the actual storage mechanism.
  */
-class memory {
+class memory_view {
 public:
     /**
-     * @brief Construct a new memory object
+     * @brief Construct a memory view from another memory view.
+     * 
+     * @param mem The source memory view to create a view into
+     * @param view_base Base address of the new view (as the address in source memory)
+     * @param view_size Size of the new view in bytes
+     */
+    memory_view(const memory_view &mem, uint64_t view_base, uint64_t view_size);
+
+    /**
+     * @brief Read data from memory.
+     * 
+     * @param addr The memory address to read from
+     * @param width The width of the data to read
+     * @param little_endian Byte ordering (true for little-endian, false for big-endian)
+     * @return The read value, or std::nullopt if read failed
+     */
+    std::optional<uint64_t> read(uint64_t addr, libvio::width_t width, bool little_endian = true);
+
+    /**
+     * @brief Write data to memory.
+     * 
+     * @param addr The memory address to write to
+     * @param width The width of the data to write (1-8 bytes)
+     * @param value The value to write
+     * @param little_endian Byte ordering (true for little-endian, false for big-endian)
+     * @return true if write succeeded, false if failed
+     */
+    bool write(uint64_t addr, libvio::width_t width, uint64_t value, bool little_endian = true);
+
+    /**
+     * @brief Get a direct pointer to host memory.
+     * 
+     * @param addr Memory address to access
+     * @return Pointer to host memory at the specified address,
+     *                  or nullptr if address is invalid
+     */
+    uint8_t* host_addr(uint64_t addr);
+
+    /**
+     * @brief Save memory contents to a file.
+     * 
+     * @param filename Path to the output file
+     */
+    void save(const char* filename) const;
+
+    /**
+     * @brief Save memory contents to an output stream.
+     * 
+     * @param out Output stream to write to
+     */
+    void save(std::ostream& out) const;
+
+    /**
+     * @brief Restore memory contents from a file.
+     * 
+     * @param filename Path to the input file
+     * @return Number of bytes successfully loaded
+     */
+    uint64_t restore(const char* filename);
+
+    /**
+     * @brief Restore memory contents from an input stream.
+     * 
+     * @param in Input stream to read from
+     * @return Number of bytes successfully loaded
+     */
+    uint64_t restore(std::istream& in);
+
+    /**
+     * @brief Load an ELF binary into memory (auto-detects 32/64-bit format).
+     * 
+     * @param buffer Pointer to the ELF file data in memory
+     * @return  The entry point address of the loaded ELF
+     */
+    uint64_t load_elf(const uint8_t* buffer);
+
+    /**
+     * @brief Load an ELF file into memory (auto-detects 32/64-bit format).
+     * 
+     * @param filename Path to the ELF file
+     * @return The entry point address of the loaded ELF
+     */
+    uint64_t load_elf_from_file(const char* filename);
+
+    /**
+     * @brief Get the size of the memory region.
+     * 
+     * @return uint64_t Size of the memory region in bytes
+     */
+    uint64_t get_size() const;
+
+    /**
+     * @brief Check if a memory access would be out of bounds.
+     *
+     * @param addr The address to check
+     * @param width The width of the memory access
+     * @return bool True if the address range [addr, addr+width-1] is invalid,
+     *              false otherwise
+     */
+    bool out_of_bound(uint64_t addr, libvio::width_t width) const;
+
+protected:
+    uint8_t *mem_ptr;  ///< Pointer to the memory storage
+    uint64_t base;     ///< Base address of the memory region
+    uint64_t size;     ///< Size of the memory region in bytes
+
+    /**
+     * @brief Protected default constructor for derived classes.
+     */
+    memory_view();
+};
+
+/**
+ * @brief Concrete memory implementation using contiguous storage.
+ * 
+ * This class provides memory operations with 64-bit addressing using a
+ * contiguous block of memory. All methods are non-virtual for performance.
+ */
+class memory: public memory_view {
+public:
+    /**
+     * @brief Construct a new memory object with contiguous storage.
      * 
      * @param mem_base Base address of the memory region
      * @param mem_size Size of memory region in bytes
      */
     memory(uint64_t mem_base, size_t mem_size);
 
-    /**
-     * @brief Read from memory at the specified address.
-     * 
-     * @param addr The memory address to read from
-     * @param width The width of the data to read
-     * @param little_endian Byte ordering (true=little, false=big)
-     * @return std::optional<uint64_t> Read value or std::nullopt if failed
-     */
-    std::optional<uint64_t> read(uint64_t addr, libvio::width_t width, bool little_endian = true);
-
-    /**
-     * @brief Write to memory at the specified address.
-     * 
-     * @param addr The memory address to write to
-     * @param width The width of the data to write
-     * @param value The value to write
-     * @param little_endian Byte ordering (true=little, false=big)
-     * @return bool True if write succeeded, false otherwise
-     */
-    bool write(uint64_t addr, libvio::width_t width, uint64_t value, bool little_endian = true);
-
-    /**
-     * @brief Get a pointer to host memory
-     * 
-     * @param addr Memory address to access
-     * @return uint8_t* Pointer to host memory or nullptr if invalid
-     */
-    uint8_t* host_addr(uint64_t addr);
-
-    /**
-     * @brief Save memory contents to file
-     * 
-     * @param filename Output filename
-     */
-    void save(const char* filename) const;
-
-    /**
-     * @brief Save memory contents to stream
-     * 
-     * @param out Output stream
-     */
-    void save(std::ostream& out) const;
-
-    /**
-     * @brief Restore memory contents from file
-     * 
-     * @param filename Input filename
-     * @return uint64_t Number of bytes loaded
-     */
-    uint64_t restore(const char* filename);
-
-    /**
-     * @brief Restore memory contents from stream
-     * 
-     * @param in Input stream
-     * @return uint64_t Number of bytes loaded
-     */
-    uint64_t restore(std::istream& in);
-
-    /**
-     * @brief Load ELF binary (auto-detect 32/64-bit)
-     * 
-     * @param buffer Pointer to ELF data
-     * @return uint64_t Entry point address
-     */
-    uint64_t load_elf(const uint8_t* buffer);
-
-    /**
-     * @brief Load ELF from file (auto-detect 32/64-bit)
-     * 
-     * @param filename ELF filename
-     * @return uint64_t Entry point address
-     */
-    uint64_t load_elf_from_file(const char* filename);
-
-    /**
-     * @brief Get memory size
-     * 
-     * @return uint64_t Size in bytes
-     */
-    uint64_t get_size() const;
-
-private:
-    bool out_of_bound(uint64_t addr, libvio::width_t width) const;
-
-    uint64_t base;
-    uint64_t size;
-    std::unique_ptr<uint8_t[]> mem;
+protected:
+    std::unique_ptr<uint8_t[]> mem;  ///< Contiguous memory storage
 };
 
 } // namespace libcpu
