@@ -21,12 +21,16 @@ class memory_view {
 public:
     /**
      * @brief Construct a memory view from another memory view.
+     *
+     * This class will map the memory in `src`, from `src_base` with the size of `view_size`
+     * to the address space of the new memory view from `view_base`.
      * 
-     * @param mem The source memory view to create a view into
-     * @param view_base Base address of the new view (as the address in source memory)
+     * @param src The source memory view to create a view into
+     * @param src_base Base address of the new view (in the address space of source memory)
+     * @param view_base Base address of the new view (in the address space of memory view)
      * @param view_size Size of the new view in bytes
      */
-    memory_view(const memory_view &mem, uint64_t view_base, uint64_t view_size);
+    memory_view(const memory_view &src, uint64_t src_base, uint64_t view_base, uint64_t view_size);
 
     /**
      * @brief Read data from memory.

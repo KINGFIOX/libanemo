@@ -9,8 +9,8 @@
 
 namespace libcpu {
 
-memory_view::memory_view(const memory_view &mem, uint64_t view_base, uint64_t view_size) {
-    mem_ptr = mem.mem_ptr;
+memory_view::memory_view(const memory_view &src, uint64_t src_base, uint64_t view_base, uint64_t view_size) {
+    mem_ptr = src.mem_ptr + intptr_t(view_base-src_base);
     base = view_base;
     size = view_size;
 }
