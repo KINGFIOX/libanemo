@@ -46,8 +46,8 @@ class privilege_module {
         WORD_T mepc, mtvec, mcause, mtval, mscratch, mie, mip, medeleg, mideleg;
         WORD_T sepc, stvec, scause, stval, sscratch, sie, sip;
 
-        memory *instr_bus;
-        memory *data_bus;
+        memory_view *instr_bus;
+        memory_view *data_bus;
         libvio::io_agent *mmio_bus;
 
         struct {

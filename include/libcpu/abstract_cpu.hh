@@ -26,8 +26,8 @@ class abstract_cpu {
     public:
         using word_t = WORD_T;              ///< Type alias for the CPU word type
 
-        memory *instr_bus = nullptr; // Pointer to the simulated instruction bus. Ignored if the subclass do not use a simulated memory.
-        memory *data_bus = nullptr; // Pointer to the simulated data bus. Ignored if the subclass do not use a simulated memory.
+        memory_view *instr_bus = nullptr; // Pointer to the simulated instruction bus. Ignored if the subclass do not use a simulated memory.
+        memory_view *data_bus = nullptr; // Pointer to the simulated data bus. Ignored if the subclass do not use a simulated memory.
         libvio::io_agent *mmio_bus = nullptr; ///< The virtual MMIO bus. If nullptr, MMIO is disabled. Ignored on user-space emulators.
 
         libvio::ringbuffer<event_t<WORD_T>> *event_buffer = nullptr;  ///< Buffer for storing CPU events. If nullptr, event tracing is off.

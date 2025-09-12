@@ -5,6 +5,7 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <cstdint>
 
 /**
  * @file event.hh
@@ -19,14 +20,14 @@ namespace libcpu {
  * 
  * Each event type has specific meanings for its val1 and val2 fields
  */
-enum class event_type_t {
+enum class event_type_t: uint8_t {
     empty = 0,   ///< Empty event, used for internal purpose only
     issue,       ///< Instruction issued - val1: instr_part1, val2: instr_part2 or zero
     reg_write,   ///< Register written - val1: rd_addr, val2: rd_data
     load,        ///< Memory load - val1: addr, val2: zero extended data or zero
     store,       ///< Memory store - val1: addr, val2: zero extended data
-    call,        ///< Function call - val1: target_addr, val2: stack_pointer
-    call_ret,    ///< Function return - val1: target_addr, val2: stack_pointer
+    call,        ///< Function call - val1: target_addr, val2: source_stack_pointer
+    call_ret,    ///< Function return - val1: target_addr, val2: target_stack_pointer
     trap,        ///< Trap handling - val1: mcause, val2: mtval
     trap_ret,    ///< Trap return - val1: target_addr, val2: custom value
     diff_error,  ///< Difftest error - val1: event_type, val2: instr_part1
