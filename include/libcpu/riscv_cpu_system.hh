@@ -178,9 +178,6 @@ void riscv_cpu_system<WORD_T>::next_instruction(void) {
   }
 
   exec_result.pc = exec_result.next_pc;
-  if (this->mmio_bus != nullptr) {
-    this->mmio_bus->next_cycle();
-  }
 }
 
 template <typename WORD_T> bool riscv_cpu_system<WORD_T>::stopped(void) const {

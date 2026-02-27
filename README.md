@@ -50,7 +50,7 @@ Then create an MMIO agent of this dispatcher with `io_dispatcher.new_agent()`.
 auto agent = dispatcher.new_agent();
 ```
 
-Then you can use `agent.read()` and `agent.write()` to simulate MMIO operations. You need to call `agent.next_cycle()` after each cycle of the simulated system. If you attach this agent to a simulated CPU, as shown below, the simulated CPU should call `agent.next_cycle()` automatically after completing each cycle.
+Then you can use `agent.read()` and `agent.write()` to simulate MMIO operations.
 
 ### Simulating a CPU
 

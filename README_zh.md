@@ -53,8 +53,6 @@ auto agent = dispatcher.new_agent();
 ```
 
 之后即可使用`agent.read()`和`agent.write()`来模拟MMIO操作。
-在模拟系统的每个周期结束后，需要调用`agent.next_cycle()`。
-若将该代理附加到模拟CPU（如下所示），模拟CPU会在完成每个周期后自动调用`agent.next_cycle()`。
 
 ### 模拟CPU
 

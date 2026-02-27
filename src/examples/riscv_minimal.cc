@@ -86,7 +86,6 @@ int main(int argc, char **argv) {
       user_core.gpr[exec_result.retire.rd] = exec_result.retire.value;
     }
     exec_result.pc = exec_result.next_pc;
-    privilege_module.mmio_bus->next_cycle();
   }
 
   return 0;

@@ -105,54 +105,11 @@ mmio_agent *io_dispatcher::new_agent(void) {
 }
 
 std::optional<uint64_t> mmio_agent::read(uint64_t addr, width_t width) {
-  // check if there are already read requests in this cycle
-  const auto &buffer = dispatcher->read_request_buffer;
-  for (size_t i = old_read_count; i < read_count; ++i) {
-    // In some cases, `read` and `write` can be called multiple times by the
-    // similator in a cycle In this case, ignore all subsequent requests. But if
-    // the same address is accessed in different ways in the same cycle. It
-    // would be an error.
-    if (addr == std::get<0>(buffer[i])) {
-      if (width == std::get<1>(buffer[i])) {
-        return std::get<2>(buffer[i]);
-      } else {
-        std::cerr << "libvio: Read request to the same address with different "
-                     "widths in the same cycle."
-                  << std::endl;
-        std::cerr << "Adderss: 0x" << std::hex << addr << std::endl;
-        return {};
-      }
-    }
-  }
   return dispatcher->request_read(addr, width, read_count++);
 }
 
 bool mmio_agent::write(uint64_t addr, width_t width, uint64_t data) {
-  // check if there are already write requests in this cycle
-  const auto &buffer = dispatcher->write_request_buffer;
-  for (size_t i = old_write_count; i < write_count; ++i) {
-    // In some cases, `read` and `write` can be called multiple times by the
-    // similator in a cycle In this case, ignore all subsequent requests. But if
-    // the same address is accessed in different ways in the same cycle. It
-    // would be an error.
-    if (addr == std::get<0>(buffer[i])) {
-      if (width == std::get<1>(buffer[i]) && addr == std::get<2>(buffer[i])) {
-        return std::get<3>(buffer[i]);
-      } else {
-        std::cerr << "libvio: Write request to the same address with different "
-                     "width or data in the same cycle."
-                  << std::endl;
-        std::cerr << "Adderss: 0x" << std::hex << addr << std::endl;
-        return false;
-      }
-    }
-  }
   return dispatcher->request_write(addr, width, write_count++, data);
-}
-
-void mmio_agent::next_cycle(void) {
-  old_read_count = read_count;
-  old_write_count = write_count;
 }
 
 } // namespace libvio

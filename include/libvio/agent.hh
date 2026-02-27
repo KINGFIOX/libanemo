@@ -28,12 +28,6 @@ class io_agent{
         * @return `true` if write succeeded, `false` otherwise
         */
         virtual bool write(uint64_t addr, width_t width, uint64_t data) = 0;
-
-        /**
-        * @brief Tell the agent that the simulated processor that it's attached to has steped a cycle.
-        * This needs to be called by the simulated processor after completing each cycle.
-        */
-        virtual void next_cycle(void) = 0;
 };
 
 }

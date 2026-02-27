@@ -27,16 +27,12 @@ class mmio_agent : public io_agent {
 public:
   std::optional<uint64_t> read(uint64_t addr, width_t width) override;
   bool write(uint64_t addr, width_t width, uint64_t data) override;
-  void next_cycle(void) override;
   friend class io_dispatcher;
 
 private:
   io_dispatcher *dispatcher = nullptr; ///< Associated dispatcher instance
   size_t read_count = 0;               ///< Count of total read requests
   size_t write_count = 0;              ///< Count of total write requests
-  size_t old_read_count = 0; ///< Count of total read requests before this cycle
-  size_t old_write_count =
-      0; ///< Count of total write requests before this cycle
 };
 
 /**
