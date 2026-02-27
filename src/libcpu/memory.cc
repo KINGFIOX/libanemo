@@ -25,8 +25,7 @@ memory::memory(uint64_t mem_base, size_t mem_size) {
   size = mem_size;
 }
 
-std::optional<uint64_t> memory_view::read(uint64_t addr, libvio::width_t width,
-                                          bool little_endian) {
+std::optional<uint64_t> memory_view::read(uint64_t addr, libvio::width_t width) {
   if (out_of_bound(addr, width)) {
     return {};
   }
@@ -35,20 +34,13 @@ std::optional<uint64_t> memory_view::read(uint64_t addr, libvio::width_t width,
   const size_t w = static_cast<size_t>(width);
 
   uint64_t value = 0;
-  if (little_endian) {
-    for (size_t i = 0; i < w; i++) {
-      value |= static_cast<uint64_t>(mem_ptr[start_offset + i]) << (i * 8);
-    }
-  } else {
-    for (size_t i = 0; i < w; i++) {
-      value = (value << 8) | mem_ptr[start_offset + i];
-    }
+  for (size_t i = 0; i < w; i++) {
+    value |= static_cast<uint64_t>(mem_ptr[start_offset + i]) << (i * 8);
   }
   return value;
 }
 
-bool memory_view::write(uint64_t addr, libvio::width_t width, uint64_t value,
-                        bool little_endian) {
+bool memory_view::write(uint64_t addr, libvio::width_t width, uint64_t value) {
   const size_t start_offset = addr - base;
   const size_t w = static_cast<size_t>(width);
 
@@ -56,14 +48,8 @@ bool memory_view::write(uint64_t addr, libvio::width_t width, uint64_t value,
     return false;
   }
 
-  if (little_endian) {
-    for (size_t i = 0; i < w; i++) {
-      mem_ptr[start_offset + i] = (value >> (i * 8)) & 0xFF;
-    }
-  } else {
-    for (size_t i = 0; i < w; i++) {
-      mem_ptr[start_offset + i] = (value >> ((w - 1 - i) * 8)) & 0xFF;
-    }
+  for (size_t i = 0; i < w; i++) {
+    mem_ptr[start_offset + i] = (value >> (i * 8)) & 0xFF;
   }
   return true;
 }

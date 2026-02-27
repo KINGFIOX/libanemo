@@ -40,12 +40,9 @@ public:
    *
    * @param addr The memory address to read from
    * @param width The width of the data to read
-   * @param little_endian Byte ordering (true for little-endian, false for
-   * big-endian)
    * @return The read value, or std::nullopt if read failed
    */
-  std::optional<uint64_t> read(uint64_t addr, libvio::width_t width,
-                               bool little_endian = true);
+  std::optional<uint64_t> read(uint64_t addr, libvio::width_t width);
 
   /**
    * @brief Write data to memory.
@@ -53,12 +50,9 @@ public:
    * @param addr The memory address to write to
    * @param width The width of the data to write (1-8 bytes)
    * @param value The value to write
-   * @param little_endian Byte ordering (true for little-endian, false for
-   * big-endian)
    * @return true if write succeeded, false if failed
    */
-  bool write(uint64_t addr, libvio::width_t width, uint64_t value,
-             bool little_endian = true);
+  bool write(uint64_t addr, libvio::width_t width, uint64_t value);
 
   /**
    * @brief Get a direct pointer to host memory.
