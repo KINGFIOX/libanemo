@@ -53,8 +53,7 @@ uint8_t riscv_cpu_system<WORD_T>::gpr_addr(const char *name) const {
 
 template <typename WORD_T>
 void riscv_cpu_system<WORD_T>::reset(WORD_T init_pc) {
-  privilege_module.instr_bus = this->instr_bus;
-  privilege_module.data_bus = this->data_bus;
+  privilege_module.mem_bus = this->mem_bus;
   privilege_module.mmio_bus = this->mmio_bus;
   user_core.reset();
   privilege_module.reset();

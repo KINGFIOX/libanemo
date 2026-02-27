@@ -37,8 +37,7 @@ int main(int argc, char **argv) {
   libcpu::riscv_cpu_system<word_t> cpu;
   libcpu::memory memory{0x80000000, 128 * 1024 * 1024}; // 创建内存
   memory.load_elf_from_file(argv[1]);                   // 装载 elf 文件
-  cpu.instr_bus = &memory;
-  cpu.data_bus = &memory;
+  cpu.mem_bus = &memory;
   cpu.mmio_bus = bus.new_agent();
   libvio::ringbuffer<libcpu::event_t<word_t>> events{4096};
   cpu.event_buffer = &events;

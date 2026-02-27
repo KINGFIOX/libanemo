@@ -46,8 +46,7 @@ public:
   WORD_T mepc, mtvec, mcause, mtval, mscratch, mie, mip, medeleg, mideleg;
   WORD_T sepc, stvec, scause, stval, sscratch, sie, sip;
 
-  memory_view *instr_bus;
-  memory_view *data_bus;
+  memory_view *mem_bus;
   libvio::io_agent *mmio_bus;
 
   struct {
@@ -255,7 +254,7 @@ void privilege_module<WORD_T>::paddr_fetch_instruction(
     exec_result_t &op) const {
   WORD_T paddr = op.pc;
   std::optional<uint32_t> instr_opt =
-      instr_bus->read(paddr, libvio::width_t::word);
+      mem_bus->read(paddr, libvio::width_t::word);
   if (instr_opt.has_value()) {
     op.type = exec_result_type_t::fetch;
     op.instr = instr_opt.value();
@@ -276,7 +275,7 @@ void privilege_module<WORD_T>::vaddr_fetch_instruction(
   if (paddr_opt.has_value()) {
     WORD_T paddr = paddr_opt.value();
     std::optional<uint32_t> instr_opt =
-        instr_bus->read(paddr, libvio::width_t::word);
+        mem_bus->read(paddr, libvio::width_t::word);
     if (instr_opt.has_value()) {
       op.type = exec_result_type_t::fetch;
       op.instr = instr_opt.value();
@@ -300,7 +299,7 @@ template <typename WORD_T>
 void privilege_module<WORD_T>::paddr_load(exec_result_t &op) {
   assert(op.type == exec_result_type_t::load);
   auto [paddr, width, sign_extend, rd] = op.load;
-  std::optional<uint64_t> data_opt = data_bus->read(paddr, width);
+  std::optional<uint64_t> data_opt = mem_bus->read(paddr, width);
   // fall back to MMIO if the address is out of RAM
   if (!data_opt.has_value() && mmio_bus != nullptr) {
     data_opt = mmio_bus->read(paddr, width);
@@ -329,7 +328,7 @@ template <typename WORD_T>
 void privilege_module<WORD_T>::paddr_store(exec_result_t &op) {
   assert(op.type == exec_result_type_t::store);
   auto [paddr, width, data] = op.store;
-  bool success = data_bus->write(paddr, width, data);
+  bool success = mem_bus->write(paddr, width, data);
   // fall back to MMIO
   if (!success && mmio_bus != nullptr) {
     success = mmio_bus->write(paddr, width, data);
@@ -357,7 +356,7 @@ void privilege_module<WORD_T>::vaddr_load(exec_result_t &op) {
   std::optional<uint64_t> paddr_opt = vaddr_to_paddr(op.load.addr);
   if (paddr_opt.has_value()) {
     uint64_t paddr = paddr_opt.value();
-    std::optional<uint64_t> data_opt = data_bus->read(paddr, width);
+    std::optional<uint64_t> data_opt = mem_bus->read(paddr, width);
     // fall back to MMIO if the address is out of RAM
     if (!data_opt.has_value() && mmio_bus != nullptr) {
       data_opt = mmio_bus->read(paddr, width);
@@ -396,7 +395,7 @@ void privilege_module<WORD_T>::vaddr_store(exec_result_t &op) {
   std::optional<uint64_t> paddr_opt = vaddr_to_paddr(vaddr);
   if (paddr_opt.has_value()) {
     uint64_t paddr = paddr_opt.value();
-    bool success = data_bus->write(paddr, width, data);
+    bool success = mem_bus->write(paddr, width, data);
     // fall back to MMIO
     if (!success && mmio_bus != nullptr) {
       success = mmio_bus->write(paddr, width, data);

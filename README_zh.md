@@ -67,8 +67,7 @@ libcpu::rv32i_cpu_system cpu;
 libcpu::contiguous_memory<uint32_t> memory{0x80000000, 128*1024*1024};
 memory.load_elf_from_file(argv[1]);
 
-cpu.instr_bus = &memory;
-cpu.data_bus = &memory;
+cpu.mem_bus = &memory;
 ```
 
 可以将一个MMIO代理连接到处理器。如果没有连接MMIO代理，MMIO请求将被忽略。
@@ -76,9 +75,6 @@ cpu.data_bus = &memory;
 ```c++
 cpu.mmio_bus = dispatcher.new_agent();
 ```
-
-你可以将`instr_bus`和`data_bus`连接到同一块内存，或者连接到各自的缓存（但两个缓存最终连接到同一个内存），
-甚至连接到不同的内存（如果处理器使用不同的地址空间来访问指令和数据）。
 
 然后使用`reset()`函数以指定的初始程序计数器重置CPU。
 之后，你可以使用`next_instruction()`或`next_cycle()`逐步推进CPU，并通过`stopped()`检查其是否已停止。

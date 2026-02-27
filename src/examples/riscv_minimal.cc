@@ -31,8 +31,7 @@ int main(int argc, char **argv) {
 
   libcpu::memory memory{0x80000000, 128 * 1024 * 1024};
   memory.load_elf_from_file(argv[1]);
-  privilege_module.instr_bus = &memory;
-  privilege_module.data_bus = &memory;
+  privilege_module.mem_bus = &memory;
 
   libvio::io_dispatcher bus{
       {{new libvio::console_frontend{},

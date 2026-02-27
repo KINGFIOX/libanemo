@@ -64,8 +64,7 @@ libcpu::rv32i_cpu_system cpu;
 libcpu::contiguous_memory<uint32_t> memory{0x80000000, 128*1024*1024};
 memory.load_elf_from_file(argv[1]);
 
-cpu.instr_bus = &memory;
-cpu.data_bus = &memory;
+cpu.mem_bus = &memory;
 ```
 
 Optionally connect an MMIO agent to the processor. MMIO requests are ignored if no MMIO agent is attached.
@@ -73,8 +72,6 @@ Optionally connect an MMIO agent to the processor. MMIO requests are ignored if 
 ```c++
 cpu.mmio_bus = dispatcher.new_agent();
 ```
-
-You can connect the `instr_bus` and `data_bus` to the same memory, or different caches with the same underlaying memory, or even different memories if the processor uses different address space to access instruction and data.
 
 Then reset the CPU with specified initial program counter with `reset()`. Then you can step the CPU forward with `next_instruction()` or `next_cycle()`, and check whether it has stopped with `stopped()`.
 
