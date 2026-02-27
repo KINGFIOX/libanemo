@@ -506,7 +506,7 @@ void privilege_module<WORD_T>::handle_exception(exec_result_t &op) {
   WORD_T pc = op.pc;
   WORD_T cause = op.trap.cause;
   WORD_T tval = op.trap.tval;
-  WORD_T trap_no = cause & ~riscv::mcause<WORD_T>::intr_mask;
+  [[maybe_unused]] WORD_T trap_no = cause & ~riscv::mcause<WORD_T>::intr_mask;
 
   priv_level_t target_priv_level;
   if (priv_level != priv_level_t::m && (medeleg & (1 << cause))) {

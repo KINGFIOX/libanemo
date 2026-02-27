@@ -132,7 +132,7 @@ template <typename WORD_T>
 std::optional<WORD_T>
 evaluate_expression(const std::vector<token_t> &postfix_expr,
                     const libcpu::abstract_cpu<WORD_T> *cpu) {
-  using SWORD_T = std::make_signed<WORD_T>;
+  using SWORD_T = std::make_signed<WORD_T>; (void)sizeof(SWORD_T);
   std::vector<WORD_T> stack;
 
   for (const auto &token : postfix_expr) {

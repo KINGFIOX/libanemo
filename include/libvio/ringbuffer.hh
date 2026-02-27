@@ -56,7 +56,7 @@ public:
 
   ~ringbuffer() { delete[] buffer; }
 
-  ringbuffer<T>(const ringbuffer<T> &other) {
+  ringbuffer(const ringbuffer &other) {
     buffer = new T[other.max_size];
     max_size = other.max_size;
     first_index = other.first_index;
@@ -64,7 +64,7 @@ public:
     std::copy(other.buffer, other.buffer + max_size, buffer);
   }
 
-  ringbuffer<T>(ringbuffer<T> &&other) {
+  ringbuffer(ringbuffer &&other) {
     buffer = other.buffer;
     max_size = other.max_size;
     first_index = other.first_index;

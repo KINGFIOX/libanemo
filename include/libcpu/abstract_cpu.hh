@@ -109,7 +109,7 @@ public:
    * instructions. Self-traps are counted as commited.
    */
   virtual void next_instruction(size_t n) {
-    for (auto i = 0; i < n; ++i) {
+    for (size_t i = 0; i < n; ++i) {
       next_instruction();
     }
   };
