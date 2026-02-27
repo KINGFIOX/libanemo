@@ -16,8 +16,7 @@ class io_agent{
         * @brief Perform a read operation on the bus
         * @param addr Target address in bus address space
         * @param width Data access width
-        * @return std::optional<uint64_t> Read data if successful, 
-        *         std::nullopt otherwise
+        * @return std::optional<uint64_t> Read data if successful, std::nullopt otherwise
         */
         virtual std::optional<uint64_t> read(uint64_t addr, width_t width) = 0;
         
@@ -32,9 +31,7 @@ class io_agent{
 
         /**
         * @brief Tell the agent that the simulated processor that it's attached to has steped a cycle.
-        * 
         * This needs to be called by the simulated processor after completing each cycle.
-        *
         */
         virtual void next_cycle(void) = 0;
 };

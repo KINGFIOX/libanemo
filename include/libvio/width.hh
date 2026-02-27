@@ -16,10 +16,10 @@ namespace libvio {
  * @brief Enumeration representing different data widths
  */
 enum class width_t {
-    byte = 1,   ///< 1-byte width (8 bits)
-    half = 2,   ///< 2-byte width (16 bits)
-    word = 4,   ///< 4-byte width (32 bits)
-    dword = 8   ///< 8-byte width (64 bits)
+  byte = 1, ///< 1-byte width (8 bits)
+  half = 2, ///< 2-byte width (16 bits)
+  word = 4, ///< 4-byte width (32 bits)
+  dword = 8 ///< 8-byte width (64 bits)
 };
 
 /**
@@ -40,7 +40,7 @@ constexpr WORD_T zero_truncate(WORD_T value, width_t width);
  */
 template <>
 constexpr uint32_t zero_truncate<uint32_t>(uint32_t value, width_t width) {
-    return value & ((1ull << (8 * static_cast<uint32_t>(width))) - 1);
+  return value & ((1ull << (8 * static_cast<uint32_t>(width))) - 1);
 }
 
 /**
@@ -51,7 +51,7 @@ constexpr uint32_t zero_truncate<uint32_t>(uint32_t value, width_t width) {
  */
 template <>
 constexpr uint64_t zero_truncate<uint64_t>(uint64_t value, width_t width) {
-    return value & ((1ull << (8 * static_cast<uint64_t>(width))) - 1);
+  return value & ((1ull << (8 * static_cast<uint64_t>(width))) - 1);
 }
 
 /**
@@ -72,14 +72,14 @@ constexpr WORD_T sign_extend(WORD_T value, width_t width);
  */
 template <>
 constexpr uint32_t sign_extend<uint32_t>(uint32_t value, width_t width) {
-    switch (width) {
-        case width_t::byte:
-            return uint32_t(int32_t(int8_t(value)));
-        case width_t::half:
-            return uint32_t(int32_t(int16_t(value)));
-        default:
-            return value;
-    }
+  switch (width) {
+  case width_t::byte:
+    return uint32_t(int32_t(int8_t(value)));
+  case width_t::half:
+    return uint32_t(int32_t(int16_t(value)));
+  default:
+    return value;
+  }
 }
 
 /**
@@ -90,19 +90,19 @@ constexpr uint32_t sign_extend<uint32_t>(uint32_t value, width_t width) {
  */
 template <>
 constexpr uint64_t sign_extend<uint64_t>(uint64_t value, width_t width) {
-    switch (width) {
-        case width_t::byte:
-            return uint64_t(int64_t(int8_t(value)));
-        case width_t::half:
-            return uint64_t(int64_t(int16_t(value)));
-        case width_t::word:
-            return uint64_t(int64_t(int32_t(value)));
-        default:
-            return value;
-    }
+  switch (width) {
+  case width_t::byte:
+    return uint64_t(int64_t(int8_t(value)));
+  case width_t::half:
+    return uint64_t(int64_t(int16_t(value)));
+  case width_t::word:
+    return uint64_t(int64_t(int32_t(value)));
+  default:
+    return value;
+  }
 }
 
-}
+} // namespace libvio
 
 namespace std {
 
@@ -112,15 +112,20 @@ namespace std {
  * @return String representation of the width
  */
 inline string to_string(libvio::width_t width) noexcept {
-    switch (width) {
-        case libvio::width_t::byte:  return "byte";
-        case libvio::width_t::half:  return "half";
-        case libvio::width_t::word:  return "word";
-        case libvio::width_t::dword: return "dword";
-        default:             return "unknown";
-    }
+  switch (width) {
+  case libvio::width_t::byte:
+    return "byte";
+  case libvio::width_t::half:
+    return "half";
+  case libvio::width_t::word:
+    return "word";
+  case libvio::width_t::dword:
+    return "dword";
+  default:
+    return "unknown";
+  }
 }
 
-}
+} // namespace std
 
 #endif

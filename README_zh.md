@@ -29,9 +29,13 @@
 - MMIO派发器：将MMIO请求分发给一组受其管理的前端。
 - MMIO代理：为模拟处理器提供接口。
 
-可以为同一类型的虚拟设备实现不同的IO后端。例如，本库中实现了一个基于iostream的简单控制台IO后端。你也可以实现另一个控制台IO后端，将模拟处理器的虚拟控制台连接到计算机的物理串口。两种后端均可与同一前端配合使用。
+可以为同一类型的虚拟设备实现不同的IO后端。
+例如，本库中实现了一个基于iostream的简单控制台IO后端。
+你也可以实现另一个控制台IO后端，将模拟处理器的虚拟控制台连接到计算机的物理串口。
+两种后端均可与同一前端配合使用。
 
-要使用`libvio`进行模拟MMIO，只需初始化一个`libvio::io_dispatcher`，并为每个虚拟设备指定IO前端、IO后端、起始地址和地址范围大小。
+要使用`libvio`进行模拟MMIO，只需初始化一个`libvio::io_dispatcher`，
+并为每个虚拟设备指定IO前端、IO后端、起始地址和地址范围大小。
 
 ```c++
 #include <libvio/bus.hh>
@@ -48,11 +52,14 @@ libvio::io_dispatcher dispatcher{{
 auto agent = dispatcher.new_agent();
 ```
 
-之后即可使用`agent.read()`和`agent.write()`来模拟MMIO操作。在模拟系统的每个周期结束后，需要调用`agent.next_cycle()`。若将该代理附加到模拟CPU（如下所示），模拟CPU会在完成每个周期后自动调用`agent.next_cycle()`。
+之后即可使用`agent.read()`和`agent.write()`来模拟MMIO操作。
+在模拟系统的每个周期结束后，需要调用`agent.next_cycle()`。
+若将该代理附加到模拟CPU（如下所示），模拟CPU会在完成每个周期后自动调用`agent.next_cycle()`。
 
 ### 模拟CPU
 
-`libcpu`提供了用于模拟处理器核心的`abstract_cpu`基类，以及用于模拟内存的`abstract_memory`基类。要模拟一个处理器，需要实例化一个处理器核心和一个虚拟内存，用适当的内容初始化内存，并将内存连接到CPU核心的内存端口。
+`libcpu`提供了用于模拟处理器核心的`abstract_cpu`基类，以及用于模拟内存的`abstract_memory`基类。
+要模拟一个处理器，需要实例化一个处理器核心和一个虚拟内存，用适当的内容初始化内存，并将内存连接到CPU核心的内存端口。
 
 ```c++
 #include <libcpu/rv32i_cpu_system.hh>
@@ -72,9 +79,11 @@ cpu.data_bus = &memory;
 cpu.mmio_bus = dispatcher.new_agent();
 ```
 
-你可以将`instr_bus`和`data_bus`连接到同一块内存，或者连接到各自的缓存（但两个缓存最终连接到同一个内存），甚至连接到不同的内存（如果处理器使用不同的地址空间来访问指令和数据）。
+你可以将`instr_bus`和`data_bus`连接到同一块内存，或者连接到各自的缓存（但两个缓存最终连接到同一个内存），
+甚至连接到不同的内存（如果处理器使用不同的地址空间来访问指令和数据）。
 
-然后使用`reset()`函数以指定的初始程序计数器重置CPU。之后，你可以使用`next_instruction()`或`next_cycle()`逐步推进CPU，并通过`stopped()`检查其是否已停止。
+然后使用`reset()`函数以指定的初始程序计数器重置CPU。
+之后，你可以使用`next_instruction()`或`next_cycle()`逐步推进CPU，并通过`stopped()`检查其是否已停止。
 
 ```c++
 cpu.reset(0x80000000);
